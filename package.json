@@ -1,0 +1,22 @@
+{
+  "name": "moldova-stores-api-node",
+  "version": "0.1.0",
+  "description": "Romanian-only read API for product data from Moldovan stores, excluding 999.md.",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "node --watch src/main.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "express": "^4.21.2",
+    "pg": "^8.14.1",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  }
+}
