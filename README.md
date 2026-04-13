@@ -14,12 +14,6 @@ npm install
 IDENTITY_DB_BACKEND=sqlite npm start
 ```
 
-Or create a root `.env` file and run:
-
-```bash
-npm start
-```
-
 Open:
 
 ```text
@@ -57,25 +51,6 @@ For Postgres:
 ```bash
 IDENTITY_DB_BACKEND=postgres
 DATABASE_URL=postgresql://user:password@host:5432/dbname
-```
-
-If your platform can upload an env file, place it at:
-
-```text
-.env
-```
-
-in the project root, next to `package.json`.
-
-Example `.env`:
-
-```bash
-IDENTITY_DB_BACKEND=postgres
-DATABASE_URL=postgresql://user:password@host:5432/dbname
-PORT=8000
-SEARCH_CACHE_TTL_SECONDS=300
-SEARCH_CACHE_MAX_ENTRIES=512
-SELF_PING_INTERVAL_SECONDS=780
 ```
 
 ## Bundled curl-impersonate

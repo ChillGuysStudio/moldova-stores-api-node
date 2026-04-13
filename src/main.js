@@ -1,9 +1,6 @@
-import { loadEnvFile } from "./env.js";
 import { createApp } from "./app.js";
 import { initDb } from "./storage/db.js";
 import { startSelfPing, stopSelfPing } from "./selfPing.js";
-
-loadEnvFile();
 
 const app = createApp();
 const port = Number.parseInt(process.env.PORT || "8000", 10);
