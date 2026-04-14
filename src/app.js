@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { buildOpenApiDocument, swaggerHtml } from "./openapi.js";
 import { productsRouter } from "./routes/products.js";
 import { storesRouter } from "./routes/stores.js";
+import { logError, logInfo } from "./utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +24,22 @@ export function createApp() {
   const app = express();
   app.use(express.json());
   app.set("trust proxy", true);
+  app.use((req, _res, next) => {
+    if (
+      req.path === "/ping" ||
+      req.path === "/docs" ||
+      req.path === "/openapi.json" ||
+      req.path.startsWith("/products")
+    ) {
+      logInfo("request", {
+        method: req.method,
+        path: req.path,
+        query: req.query,
+        ip: req.ip
+      });
+    }
+    next();
+  });
   app.use(express.static(PUBLIC_DIR));
   app.use(storesRouter);
   app.use("/products", productsRouter);
@@ -37,6 +54,7 @@ export function createApp() {
   });
   app.use((error, _req, res, _next) => {
     const message = error instanceof Error ? error.message : String(error);
+    logError("express error", error);
     if (res.headersSent) {
       return;
     }

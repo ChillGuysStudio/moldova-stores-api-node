@@ -9,12 +9,14 @@ import {
 } from "../models.js";
 import { cachedNativeSearch } from "../searchCache.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { logError, logInfo, logWarn } from "../utils/logger.js";
 
 export const productsRouter = express.Router();
 
 productsRouter.get("/search", asyncHandler(async (req, res) => {
   const query = String(req.query.q || "").trim();
   if (!query) {
+    logWarn("search rejected: missing query");
     return res.status(400).json({ detail: "Query parameter q is required" });
   }
   const page = clampPositiveInt(req.query.page, 1);
@@ -26,8 +28,11 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.startsWith("Unsupported store") ? 404 : 400;
+    logWarn("search rejected: invalid stores", { stores: req.query.stores, message });
     return res.status(status).json({ detail: message });
   }
+
+  logInfo("search start", { query, page, pageSize, stores: selectedStores });
 
   const settled = await Promise.allSettled(
     selectedStores.map((store) => searchStore(store, { q: query, page, pageSize }))
@@ -44,7 +49,16 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
       response.results[store] = result.value;
       return;
     }
+    logError("search store failed", { store, query, page, pageSize, error: result.reason });
     response.errors[store] = makeStoreSearchError(store, result.reason?.message || String(result.reason));
+  });
+  logInfo("search complete", {
+    query,
+    page,
+    pageSize,
+    stores: selectedStores,
+    ok: Object.keys(response.results),
+    errors: Object.keys(response.errors)
   });
   return res.json(response);
 }));
@@ -52,12 +66,14 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
 productsRouter.get("/by-url", asyncHandler(async (req, res) => {
   const inputUrl = String(req.query.url || "").trim();
   if (!inputUrl) {
+    logWarn("by-url rejected: missing url");
     return res.status(400).json({ detail: "Absolute product URL is required" });
   }
   let store;
   try {
     store = storeFromUrl(inputUrl);
   } catch (error) {
+    logWarn("by-url rejected: unsupported host", { url: inputUrl, error });
     return res.status(400).json({ detail: error.message });
   }
   const adapter = adapterOr404(store, res);
@@ -66,8 +82,10 @@ productsRouter.get("/by-url", asyncHandler(async (req, res) => {
   }
   try {
     const product = await adapter.getByUrl(inputUrl);
+    logInfo("by-url success", { store, url: inputUrl, source_id: product.source_id });
     return res.json(product);
   } catch (error) {
+    logError("by-url failed", { store, url: inputUrl, error });
     return res.status(502).json({ detail: error.message });
   }
 }));
@@ -79,9 +97,19 @@ productsRouter.get("/:store/:sourceId", asyncHandler(async (req, res) => {
   }
   try {
     const product = await adapter.getById(req.params.sourceId);
+    logInfo("by-id success", {
+      store: req.params.store,
+      sourceId: req.params.sourceId,
+      resolved: product.source_id
+    });
     return res.json(product);
   } catch (error) {
     if (error instanceof ProductNotResolvedError) {
+      logWarn("by-id unresolved", {
+        store: error.store,
+        sourceId: error.source_id,
+        message: error.message
+      });
       return res.status(404).json({
         error: "product_id_not_resolved",
         store: error.store,
@@ -90,8 +118,10 @@ productsRouter.get("/:store/:sourceId", asyncHandler(async (req, res) => {
       });
     }
     if (error instanceof Error && error.message.includes("not found")) {
+      logWarn("by-id not found", { store: req.params.store, sourceId: req.params.sourceId, error });
       return res.status(404).json({ detail: error.message });
     }
+    logError("by-id failed", { store: req.params.store, sourceId: req.params.sourceId, error });
     return res.status(502).json({ detail: error.message || String(error) });
   }
 }));
