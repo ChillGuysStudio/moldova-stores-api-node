@@ -12,8 +12,15 @@ const DEFAULT_HEADERS = [
   "accept-language: ro-RO,ro;q=0.9,en-US;q=0.7,en;q=0.6",
   "user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
 ];
+const SYSTEM_CA_BUNDLE_CANDIDATES = [
+  "/etc/ssl/certs/ca-certificates.crt",
+  "/etc/pki/tls/certs/ca-bundle.crt",
+  "/etc/ssl/cert.pem",
+  "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+];
 
 let resolvedBinary = null;
+let resolvedCaBundle = undefined;
 
 function bundledCandidates() {
   const platform = process.platform;
@@ -36,10 +43,10 @@ function bundledCandidates() {
       ];
 
   const directories = [
-    path.join(root, "bin"),
     path.join(root, "bin", `${platform}-${arch}`),
     path.join(root, "bin", platform),
-    path.join(root, "bin", arch)
+    path.join(root, "bin", arch),
+    path.join(root, "bin")
   ];
 
   const candidates = [];
@@ -86,6 +93,23 @@ async function resolveBinary() {
   );
 }
 
+function resolveCaBundle() {
+  if (resolvedCaBundle !== undefined) {
+    return resolvedCaBundle;
+  }
+
+  const root = path.resolve(__dirname, "..", "..");
+  const candidates = [
+    process.env.CURL_CA_BUNDLE,
+    process.env.SSL_CERT_FILE,
+    path.join(root, "certs", "cacert.pem"),
+    ...SYSTEM_CA_BUNDLE_CANDIDATES
+  ].filter(Boolean);
+
+  resolvedCaBundle = candidates.find((candidate) => fs.existsSync(candidate)) || null;
+  return resolvedCaBundle;
+}
+
 async function runCurl(args, { requireImpersonation = false } = {}) {
   const binary = await resolveBinary();
   if (requireImpersonation && binary === "curl") {
@@ -93,7 +117,14 @@ async function runCurl(args, { requireImpersonation = false } = {}) {
       "curl-impersonate is required for this request, but only plain curl is available. Set CURL_IMPERSONATE_BIN."
     );
   }
+  const caBundle = resolveCaBundle();
+  const env = { ...process.env };
+  if (caBundle) {
+    env.CURL_CA_BUNDLE = caBundle;
+    env.SSL_CERT_FILE = caBundle;
+  }
   const { stdout } = await execFileAsync(binary, args, {
+    env,
     maxBuffer: 10 * 1024 * 1024
   });
   return stdout;

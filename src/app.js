@@ -26,14 +26,21 @@ export function createApp() {
   app.use(express.static(PUBLIC_DIR));
   app.use(storesRouter);
   app.use("/products", productsRouter);
-  app.get("/openapi.json", async (req, res) => {
+  app.get("/openapi.json", (req, res) => {
     res.json(buildOpenApiDocument(requestBaseUrl(req)));
   });
-  app.get("/docs", async (_req, res) => {
+  app.get("/docs", (_req, res) => {
     res.type("html").send(swaggerHtml());
   });
-  app.get("/ping", async (_req, res) => {
+  app.get("/ping", (_req, res) => {
     res.json({ status: "ok" });
+  });
+  app.use((error, _req, res, _next) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (res.headersSent) {
+      return;
+    }
+    res.status(500).json({ detail: message });
   });
   return app;
 }

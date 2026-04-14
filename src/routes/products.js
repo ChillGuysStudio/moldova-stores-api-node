@@ -8,10 +8,11 @@ import {
   makeStoreSearchError
 } from "../models.js";
 import { cachedNativeSearch } from "../searchCache.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const productsRouter = express.Router();
 
-productsRouter.get("/search", async (req, res) => {
+productsRouter.get("/search", asyncHandler(async (req, res) => {
   const query = String(req.query.q || "").trim();
   if (!query) {
     return res.status(400).json({ detail: "Query parameter q is required" });
@@ -46,9 +47,9 @@ productsRouter.get("/search", async (req, res) => {
     response.errors[store] = makeStoreSearchError(store, result.reason?.message || String(result.reason));
   });
   return res.json(response);
-});
+}));
 
-productsRouter.get("/by-url", async (req, res) => {
+productsRouter.get("/by-url", asyncHandler(async (req, res) => {
   const inputUrl = String(req.query.url || "").trim();
   if (!inputUrl) {
     return res.status(400).json({ detail: "Absolute product URL is required" });
@@ -69,9 +70,9 @@ productsRouter.get("/by-url", async (req, res) => {
   } catch (error) {
     return res.status(502).json({ detail: error.message });
   }
-});
+}));
 
-productsRouter.get("/:store/:sourceId", async (req, res) => {
+productsRouter.get("/:store/:sourceId", asyncHandler(async (req, res) => {
   const adapter = adapterOr404(req.params.store, res);
   if (!adapter) {
     return undefined;
@@ -93,7 +94,7 @@ productsRouter.get("/:store/:sourceId", async (req, res) => {
     }
     return res.status(502).json({ detail: error.message || String(error) });
   }
-});
+}));
 
 function adapterOr404(store, res) {
   const adapter = ADAPTERS[store];
