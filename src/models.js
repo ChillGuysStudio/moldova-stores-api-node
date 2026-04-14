@@ -10,7 +10,9 @@ export const HOST_TO_STORE = {
   "maximum.md": "maximum",
   "www.maximum.md": "maximum",
   "xstore.md": "xstore",
-  "www.xstore.md": "xstore"
+  "www.xstore.md": "xstore",
+  "ultra.md": "ultra",
+  "www.ultra.md": "ultra"
 };
 
 export function makePrice(overrides = {}) {

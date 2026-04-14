@@ -52,5 +52,14 @@ export const STORE_CAPABILITIES = {
     supports_url_fetch: true,
     supports_id_fetch: "cached_or_resolved",
     notes: "Uses the Romanian HTML search page; cold numeric ID lookup is unreliable, search/by-url fills the resolver cache."
+  },
+  ultra: {
+    store: "ultra",
+    name: "Ultra.md",
+    base_url: "https://ultra.md",
+    supports_search: true,
+    supports_url_fetch: true,
+    supports_id_fetch: "cached_or_resolved",
+    notes: "Uses the internal /search/categories JSON endpoint with HTML product fragments; by-id resolves through cache or exact code search."
   }
 };
