@@ -1,8 +1,8 @@
-const DEFAULT_SELF_PING_INTERVAL_SECONDS = 13 * 60;
+const DEFAULT_SELF_PING_INTERVAL_SECONDS = 60;
 let timer = null;
 
 export function getSelfPingUrl() {
-  const baseUrl = (process.env.RENDER_EXTERNAL_URL || "").trim().replace(/\/+$/, "");
+  const baseUrl = (process.env.SELF_PING_BASE_URL || "").trim().replace(/\/+$/, "");
   if (!baseUrl) {
     return null;
   }
