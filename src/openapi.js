@@ -45,7 +45,7 @@ export function buildOpenApiDocument(baseUrl) {
     openapi: "3.1.0",
     info: {
       title: "Moldova Stores Product API Node",
-      description: "Romanian-only read API for product data from Moldovan stores, excluding 999.md.",
+      description: "Romanian-only read API for product data from Moldovan stores.",
       version: "0.1.0"
     },
     servers,
