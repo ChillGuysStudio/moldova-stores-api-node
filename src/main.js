@@ -1,11 +1,9 @@
-import { loadEnvFile } from "./env.js";
 import { createApp } from "./app.js";
 import { initDb } from "./storage/db.js";
 import { startSelfPing, stopSelfPing } from "./selfPing.js";
 import { logError, logInfo } from "./utils/logger.js";
 
 logInfo("bootstrap: main.js loaded");
-loadEnvFile();
 logInfo("bootstrap: env loaded", { port: process.env.PORT || "8000" });
 
 const app = createApp();

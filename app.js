@@ -1,1 +1,5 @@
-import "./src/main.js";
+import { loadEnvFile } from "./src/env.js";
+
+loadEnvFile();
+
+import("./src/main.js");

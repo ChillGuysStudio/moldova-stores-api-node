@@ -40,7 +40,12 @@ export function createApp() {
     }
     next();
   });
-  app.use(express.static(PUBLIC_DIR));
+  app.get("/", (_req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  });
+  app.get("/index.html", (_req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  });
   app.use(storesRouter);
   app.use("/products", productsRouter);
   app.get("/openapi.json", (req, res) => {
@@ -51,6 +56,11 @@ export function createApp() {
   });
   app.get("/ping", (_req, res) => {
     res.json({ status: "ok" });
+  });
+  app.use((req, res) => {
+    res.status(404).json({
+      detail: `Route not found: ${req.method} ${req.originalUrl}`
+    });
   });
   app.use((error, _req, res, _next) => {
     const message = error instanceof Error ? error.message : String(error);
