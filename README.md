@@ -14,6 +14,12 @@ npm install
 IDENTITY_DB_BACKEND=sqlite npm start
 ```
 
+Or create a root `.env` file and run:
+
+```bash
+npm start
+```
+
 Open:
 
 ```text
@@ -51,6 +57,20 @@ For Postgres:
 ```bash
 IDENTITY_DB_BACKEND=postgres
 DATABASE_URL=postgresql://user:password@host:5432/dbname
+```
+
+Example `.env` in the project root:
+
+```bash
+IDENTITY_DB_BACKEND=postgres
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+PORT=8000
+SEARCH_CACHE_TTL_SECONDS=300
+SEARCH_CACHE_MAX_ENTRIES=512
+SELF_PING_INTERVAL_SECONDS=780
+NODE_ENV=production
+CURL_CA_BUNDLE=/var/www/vhosts/pricehistory.md/nodeapp/certs/cacert.pem
+SSL_CERT_FILE=/var/www/vhosts/pricehistory.md/nodeapp/certs/cacert.pem
 ```
 
 For hosts like Plesk, use:
