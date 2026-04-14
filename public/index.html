@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ro">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Moldova Stores Product API</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7fb;
+        --surface: #ffffff;
+        --text: #111827;
+        --muted: #5b6474;
+        --line: #d8deea;
+        --accent: #0b73f0;
+        --accent-strong: #0959ba;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      main {
+        width: min(920px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 48px 0 72px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 40px;
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.6;
+      }
+
+      .intro {
+        display: grid;
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 36px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 8px;
+        border: 1px solid var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: #ffffff;
+      }
+
+      .button.primary:hover {
+        background: var(--accent-strong);
+      }
+
+      .button.secondary {
+        background: var(--surface);
+        color: var(--accent);
+      }
+
+      .section {
+        padding: 24px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .section h2 {
+        margin: 0 0 10px;
+        font-size: 22px;
+      }
+
+      ul {
+        margin: 14px 0 0;
+        padding-left: 20px;
+        color: var(--muted);
+      }
+
+      li + li {
+        margin-top: 8px;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 14px;
+        background: #eef2f8;
+        padding: 2px 6px;
+        border-radius: 6px;
+        color: #10203d;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding-top: 36px;
+        }
+
+        h1 {
+          font-size: 31px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="intro">
+        <h1>Moldova Stores Product API</h1>
+        <p>Date despre produse din magazine online din Moldova, cu raspunsuri normalizate pentru cautare, fetch dupa URL si fetch dupa ID.</p>
+      </section>
+
+      <div class="actions">
+        <a class="button primary" href="/docs">Deschide documentatia</a>
+        <a class="button secondary" href="/ping">Verifica starea API</a>
+      </div>
+
+      <section class="section">
+        <h2>Puncte rapide</h2>
+        <ul>
+          <li><code>GET /stores</code> pentru magazinele disponibile si capabilitatile lor.</li>
+          <li><code>GET /products/search?q=iphone&amp;page=1&amp;page_size=5</code> pentru cautare normalizata.</li>
+          <li><code>GET /products/by-url?url=...</code> pentru produs direct dupa URL.</li>
+          <li><code>GET /products/{store}/{sourceId}</code> pentru fetch dupa magazin si ID.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Magazine</h2>
+        <p>Bomba, Darwin, Enter, Maximum, Smart si XStore.</p>
+      </section>
+    </main>
+  </body>
+</html>

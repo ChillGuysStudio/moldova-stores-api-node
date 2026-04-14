@@ -53,6 +53,12 @@ IDENTITY_DB_BACKEND=postgres
 DATABASE_URL=postgresql://user:password@host:5432/dbname
 ```
 
+For hosts like Plesk, use:
+
+- `Application Root`: `/nodeapp`
+- `Application Startup File`: `app.js`
+- `Document Root`: `/nodeapp/public`
+
 ## Bundled curl-impersonate
 
 The app can auto-detect a bundled impersonation binary at runtime based on `process.platform` and `process.arch`.

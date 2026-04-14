@@ -35,7 +35,12 @@ function productSchema() {
   };
 }
 
-export function buildOpenApiDocument() {
+export function buildOpenApiDocument(baseUrl) {
+  const servers = [];
+  if (baseUrl) {
+    servers.push({ url: baseUrl });
+  }
+
   return {
     openapi: "3.1.0",
     info: {
@@ -43,11 +48,7 @@ export function buildOpenApiDocument() {
       description: "Romanian-only read API for product data from Moldovan stores, excluding 999.md.",
       version: "0.1.0"
     },
-    servers: [
-      {
-        url: process.env.RENDER_EXTERNAL_URL || "http://127.0.0.1:8000"
-      }
-    ],
+    servers,
     components: {
       schemas: {
         Product: productSchema(),

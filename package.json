@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "description": "Romanian-only read API for product data from Moldovan stores, excluding 999.md.",
   "type": "module",
-  "main": "src/main.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node src/main.js",
-    "dev": "node --watch src/main.js",
+    "start": "node app.js",
+    "dev": "node --watch app.js",
     "test": "node --test"
   },
   "engines": {
