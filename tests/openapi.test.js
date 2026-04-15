@@ -18,4 +18,5 @@ test("openapi can omit admin endpoints for production docs", () => {
   assert.equal(document.paths["/admin/api-keys"], undefined);
   assert.equal(document.paths["/admin/api-keys/{id}/revoke"], undefined);
   assert.equal(document.tags.some((tag) => tag.name === "Admin"), false);
+  assert.equal(document.components.schemas.ApiKey, undefined);
 });

@@ -277,6 +277,79 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
     };
   }
 
+  const schemas = {
+    Product: productSchema(),
+    ProductList: {
+      type: "object",
+      properties: {
+        store: { type: "string" },
+        query: { type: "string" },
+        page: { type: "integer" },
+        page_size: { type: ["integer", "null"] },
+        products: {
+          type: "array",
+          items: { $ref: "#/components/schemas/Product" }
+        },
+        total: { type: ["integer", "null"] }
+      }
+    },
+    MultiStoreProductSearch: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        page: { type: "integer" },
+        page_size: { type: ["integer", "null"] },
+        stores: {
+          type: "array",
+          items: { type: "string" }
+        },
+        results: {
+          type: "object",
+          additionalProperties: { $ref: "#/components/schemas/ProductList" }
+        },
+        errors: {
+          type: "object",
+          additionalProperties: {
+            type: "object",
+            properties: {
+              store: { type: "string" },
+              message: { type: "string" }
+            }
+          }
+        }
+      }
+    },
+    StoreCapabilities: {
+      type: "object",
+      properties: {
+        store: { type: "string" },
+        name: { type: "string" },
+        base_url: { type: "string" },
+        supports_search: { type: "boolean" },
+        supports_url_fetch: { type: "boolean" },
+        supports_id_fetch: {
+          type: "string",
+          enum: ["direct", "search_resolved", "cached_or_resolved"]
+        },
+        notes: { type: ["string", "null"] }
+      }
+    }
+  };
+
+  if (includeAdmin) {
+    schemas.ApiKey = {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        key_prefix: { type: "string" },
+        created_at: { type: ["string", "null"] },
+        last_used_at: { type: ["string", "null"] },
+        revoked_at: { type: ["string", "null"] }
+      }
+    };
+  }
+
   return {
     openapi: "3.1.0",
     info: {
@@ -293,75 +366,7 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
           scheme: "bearer"
         }
       },
-      schemas: {
-        Product: productSchema(),
-        ApiKey: {
-          type: "object",
-          properties: {
-            id: { type: "string" },
-            name: { type: "string" },
-            key_prefix: { type: "string" },
-            created_at: { type: ["string", "null"] },
-            last_used_at: { type: ["string", "null"] },
-            revoked_at: { type: ["string", "null"] }
-          }
-        },
-        ProductList: {
-          type: "object",
-          properties: {
-            store: { type: "string" },
-            query: { type: "string" },
-            page: { type: "integer" },
-            page_size: { type: ["integer", "null"] },
-            products: {
-              type: "array",
-              items: { $ref: "#/components/schemas/Product" }
-            },
-            total: { type: ["integer", "null"] }
-          }
-        },
-        MultiStoreProductSearch: {
-          type: "object",
-          properties: {
-            query: { type: "string" },
-            page: { type: "integer" },
-            page_size: { type: ["integer", "null"] },
-            stores: {
-              type: "array",
-              items: { type: "string" }
-            },
-            results: {
-              type: "object",
-              additionalProperties: { $ref: "#/components/schemas/ProductList" }
-            },
-            errors: {
-              type: "object",
-              additionalProperties: {
-                type: "object",
-                properties: {
-                  store: { type: "string" },
-                  message: { type: "string" }
-                }
-              }
-            }
-          }
-        },
-        StoreCapabilities: {
-          type: "object",
-          properties: {
-            store: { type: "string" },
-            name: { type: "string" },
-            base_url: { type: "string" },
-            supports_search: { type: "boolean" },
-            supports_url_fetch: { type: "boolean" },
-            supports_id_fetch: {
-              type: "string",
-              enum: ["direct", "search_resolved", "cached_or_resolved"]
-            },
-            notes: { type: ["string", "null"] }
-          }
-        }
-      }
+      schemas
     },
     paths
   };
