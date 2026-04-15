@@ -28,7 +28,7 @@ function shouldIncludeAdminDocs() {
 
 function shouldLogRequest(req) {
   if (process.env.NODE_ENV === "production") {
-    return false;
+    return req.path === "/ping";
   }
   return (
     req.path === "/ping" ||
