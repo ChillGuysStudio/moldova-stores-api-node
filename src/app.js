@@ -22,6 +22,10 @@ function requestBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
+function shouldIncludeAdminDocs() {
+  return process.env.NODE_ENV !== "production";
+}
+
 export function createApp() {
   const app = express();
   app.use(express.json());
@@ -52,7 +56,11 @@ export function createApp() {
   app.use(storesRouter);
   app.use("/products", requireApiKey, productsRouter);
   app.get("/openapi.json", (req, res) => {
-    res.json(buildOpenApiDocument(requestBaseUrl(req)));
+    res.json(
+      buildOpenApiDocument(requestBaseUrl(req), {
+        includeAdmin: shouldIncludeAdminDocs()
+      })
+    );
   });
   app.get("/docs", (_req, res) => {
     res.type("html").send(swaggerHtml());

@@ -35,10 +35,246 @@ function productSchema() {
   };
 }
 
-export function buildOpenApiDocument(baseUrl) {
+export function buildOpenApiDocument(baseUrl, options = {}) {
+  const { includeAdmin = true } = options;
   const servers = [];
   if (baseUrl) {
     servers.push({ url: baseUrl });
+  }
+
+  const tags = [
+    { name: "Public", description: "Health checks and documentation endpoints." },
+    { name: "Stores", description: "Store catalog metadata endpoints." },
+    { name: "Products", description: "Product search and lookup endpoints." }
+  ];
+
+  if (includeAdmin) {
+    tags.push({
+      name: "Admin",
+      description: "Administrative API key management endpoints."
+    });
+  }
+
+  const paths = {
+    "/ping": {
+      get: {
+        summary: "Health ping",
+        tags: ["Public"],
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    status: { type: "string", example: "ok" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stores": {
+      get: {
+        summary: "List supported stores",
+        tags: ["Stores"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Store capabilities",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/StoreCapabilities" }
+                },
+                example: Object.values(STORE_CAPABILITIES)
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/search": {
+      get: {
+        summary: "Search products across one or more stores",
+        tags: ["Products"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "q", in: "query", required: true, schema: { type: "string" } },
+          { name: "stores", in: "query", required: false, schema: { type: "string" } },
+          { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } },
+          {
+            name: "page_size",
+            in: "query",
+            required: false,
+            schema: { type: "integer", default: 20, minimum: 1, maximum: 100 }
+          }
+        ],
+        responses: {
+          200: {
+            description: "Grouped multi-store search response",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/MultiStoreProductSearch" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/by-url": {
+      get: {
+        summary: "Fetch a product by absolute product URL",
+        tags: ["Products"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "url",
+            in: "query",
+            required: true,
+            schema: { type: "string" }
+          }
+        ],
+        responses: {
+          200: {
+            description: "Normalized product",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Product" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/{store}/{sourceId}": {
+      get: {
+        summary: "Fetch a product by store and source id",
+        tags: ["Products"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "store",
+            in: "path",
+            required: true,
+            schema: { type: "string", enum: Object.keys(STORE_CAPABILITIES) }
+          },
+          {
+            name: "sourceId",
+            in: "path",
+            required: true,
+            schema: { type: "string" }
+          }
+        ],
+        responses: {
+          200: {
+            description: "Normalized product",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Product" }
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  if (includeAdmin) {
+    paths["/admin/api-keys"] = {
+      get: {
+        summary: "List API keys",
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "API key metadata",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    items: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/ApiKey" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        summary: "Create API key",
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" }
+                },
+                required: ["name"]
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: "Created API key",
+            content: {
+              "application/json": {
+                schema: {
+                  allOf: [
+                    { $ref: "#/components/schemas/ApiKey" },
+                    {
+                      type: "object",
+                      properties: {
+                        api_key: { type: "string" }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    paths["/admin/api-keys/{id}/revoke"] = {
+      post: {
+        summary: "Revoke API key",
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" }
+          }
+        ],
+        responses: {
+          200: {
+            description: "Revoked API key metadata",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ApiKey" }
+              }
+            }
+          }
+        }
+      }
+    };
   }
 
   return {
@@ -49,12 +285,7 @@ export function buildOpenApiDocument(baseUrl) {
       version: "0.1.0"
     },
     servers,
-    tags: [
-      { name: "Public", description: "Health checks and documentation endpoints." },
-      { name: "Stores", description: "Store catalog metadata endpoints." },
-      { name: "Products", description: "Product search and lookup endpoints." },
-      { name: "Admin", description: "Administrative API key management endpoints." }
-    ],
+    tags,
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -132,223 +363,7 @@ export function buildOpenApiDocument(baseUrl) {
         }
       }
     },
-    paths: {
-      "/ping": {
-        get: {
-          summary: "Health ping",
-          tags: ["Public"],
-          responses: {
-            200: {
-              description: "OK",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      status: { type: "string", example: "ok" }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/stores": {
-        get: {
-          summary: "List supported stores",
-          tags: ["Stores"],
-          security: [{ bearerAuth: [] }],
-          responses: {
-            200: {
-              description: "Store capabilities",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "array",
-                    items: { $ref: "#/components/schemas/StoreCapabilities" }
-                  },
-                  example: Object.values(STORE_CAPABILITIES)
-                }
-              }
-            }
-          }
-        }
-      },
-      "/products/search": {
-        get: {
-          summary: "Search products across one or more stores",
-          tags: ["Products"],
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            { name: "q", in: "query", required: true, schema: { type: "string" } },
-            { name: "stores", in: "query", required: false, schema: { type: "string" } },
-            { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } },
-            {
-              name: "page_size",
-              in: "query",
-              required: false,
-              schema: { type: "integer", default: 20, minimum: 1, maximum: 100 }
-            }
-          ],
-          responses: {
-            200: {
-              description: "Grouped multi-store search response",
-              content: {
-                "application/json": {
-                  schema: { $ref: "#/components/schemas/MultiStoreProductSearch" }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/products/by-url": {
-        get: {
-          summary: "Fetch a product by absolute product URL",
-          tags: ["Products"],
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            {
-              name: "url",
-              in: "query",
-              required: true,
-              schema: { type: "string" }
-            }
-          ],
-          responses: {
-            200: {
-              description: "Normalized product",
-              content: {
-                "application/json": {
-                  schema: { $ref: "#/components/schemas/Product" }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/products/{store}/{sourceId}": {
-        get: {
-          summary: "Fetch a product by store and source id",
-          tags: ["Products"],
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            {
-              name: "store",
-              in: "path",
-              required: true,
-              schema: { type: "string", enum: Object.keys(STORE_CAPABILITIES) }
-            },
-            {
-              name: "sourceId",
-              in: "path",
-              required: true,
-              schema: { type: "string" }
-            }
-          ],
-          responses: {
-            200: {
-              description: "Normalized product",
-              content: {
-                "application/json": {
-                  schema: { $ref: "#/components/schemas/Product" }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/admin/api-keys": {
-        get: {
-          summary: "List API keys",
-          tags: ["Admin"],
-          security: [{ bearerAuth: [] }],
-          responses: {
-            200: {
-              description: "API key metadata",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      items: {
-                        type: "array",
-                        items: { $ref: "#/components/schemas/ApiKey" }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        post: {
-          summary: "Create API key",
-          tags: ["Admin"],
-          security: [{ bearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              "application/json": {
-                schema: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" }
-                  },
-                  required: ["name"]
-                }
-              }
-            }
-          },
-          responses: {
-            201: {
-              description: "Created API key",
-              content: {
-                "application/json": {
-                  schema: {
-                    allOf: [
-                      { $ref: "#/components/schemas/ApiKey" },
-                      {
-                        type: "object",
-                        properties: {
-                          api_key: { type: "string" }
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/admin/api-keys/{id}/revoke": {
-        post: {
-          summary: "Revoke API key",
-          tags: ["Admin"],
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            {
-              name: "id",
-              in: "path",
-              required: true,
-              schema: { type: "string" }
-            }
-          ],
-          responses: {
-            200: {
-              description: "Revoked API key metadata",
-              content: {
-                "application/json": {
-                  schema: { $ref: "#/components/schemas/ApiKey" }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+    paths
   };
 }
 
