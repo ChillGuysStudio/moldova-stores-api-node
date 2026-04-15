@@ -50,8 +50,25 @@ export function buildOpenApiDocument(baseUrl) {
     },
     servers,
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer"
+        }
+      },
       schemas: {
         Product: productSchema(),
+        ApiKey: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            key_prefix: { type: "string" },
+            created_at: { type: ["string", "null"] },
+            last_used_at: { type: ["string", "null"] },
+            revoked_at: { type: ["string", "null"] }
+          }
+        },
         ProductList: {
           type: "object",
           properties: {
@@ -133,6 +150,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/stores": {
         get: {
           summary: "List supported stores",
+          security: [{ bearerAuth: [] }],
           responses: {
             200: {
               description: "Store capabilities",
@@ -152,6 +170,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/products/search": {
         get: {
           summary: "Search products across one or more stores",
+          security: [{ bearerAuth: [] }],
           parameters: [
             { name: "q", in: "query", required: true, schema: { type: "string" } },
             { name: "stores", in: "query", required: false, schema: { type: "string" } },
@@ -178,6 +197,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/products/by-url": {
         get: {
           summary: "Fetch a product by absolute product URL",
+          security: [{ bearerAuth: [] }],
           parameters: [
             {
               name: "url",
@@ -201,6 +221,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/products/{store}/{sourceId}": {
         get: {
           summary: "Fetch a product by store and source id",
+          security: [{ bearerAuth: [] }],
           parameters: [
             {
               name: "store",
@@ -221,6 +242,92 @@ export function buildOpenApiDocument(baseUrl) {
               content: {
                 "application/json": {
                   schema: { $ref: "#/components/schemas/Product" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/api-keys": {
+        get: {
+          summary: "List API keys",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "API key metadata",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/ApiKey" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          summary: "Create API key",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" }
+                  },
+                  required: ["name"]
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: "Created API key",
+              content: {
+                "application/json": {
+                  schema: {
+                    allOf: [
+                      { $ref: "#/components/schemas/ApiKey" },
+                      {
+                        type: "object",
+                        properties: {
+                          api_key: { type: "string" }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/admin/api-keys/{id}/revoke": {
+        post: {
+          summary: "Revoke API key",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" }
+            }
+          ],
+          responses: {
+            200: {
+              description: "Revoked API key metadata",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ApiKey" }
                 }
               }
             }

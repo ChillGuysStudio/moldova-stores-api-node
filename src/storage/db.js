@@ -62,10 +62,12 @@ export async function initDb() {
   if (getIdentityDbBackend() === "postgres") {
     const pool = connectPostgres();
     await pool.query(createIdentityTableSql());
+    await pool.query(createApiKeyTableSql());
     return;
   }
   const db = await connectSqlite();
   await db.exec(createIdentityTableSql().replaceAll("TIMESTAMPTZ", "TEXT"));
+  await db.exec(createApiKeyTableSql().replaceAll("TIMESTAMPTZ", "TEXT"));
 }
 
 function createIdentityTableSql() {
@@ -78,6 +80,20 @@ function createIdentityTableSql() {
         name TEXT,
         last_seen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (store, source_id)
+    )
+  `;
+}
+
+function createApiKeyTableSql() {
+  return `
+    CREATE TABLE IF NOT EXISTS api_key (
+        id TEXT NOT NULL PRIMARY KEY,
+        name TEXT NOT NULL,
+        key_hash TEXT NOT NULL UNIQUE,
+        key_prefix TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_used_at TIMESTAMPTZ,
+        revoked_at TIMESTAMPTZ
     )
   `;
 }

@@ -1,7 +1,9 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { requireAdminToken, requireApiKey } from "./middleware/auth.js";
 import { buildOpenApiDocument, swaggerHtml } from "./openapi.js";
+import { adminRouter } from "./routes/admin.js";
 import { productsRouter } from "./routes/products.js";
 import { storesRouter } from "./routes/stores.js";
 import { logError, logInfo } from "./utils/logger.js";
@@ -46,8 +48,9 @@ export function createApp() {
   app.get("/index.html", (_req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, "index.html"));
   });
-  app.use(storesRouter);
-  app.use("/products", productsRouter);
+  app.use("/admin", requireAdminToken, adminRouter);
+  app.use(requireApiKey, storesRouter);
+  app.use("/products", requireApiKey, productsRouter);
   app.get("/openapi.json", (req, res) => {
     res.json(buildOpenApiDocument(requestBaseUrl(req)));
   });
