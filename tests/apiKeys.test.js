@@ -86,6 +86,11 @@ test("admin token can create and revoke client API keys", async () => {
       assert.equal(adminAllowed.nextCalled, true);
       assert.equal(adminAllowed.nextError, null);
 
+      const adminApiAllowed = await runMiddleware(requireApiKey, makeRequest("admin-secret"));
+      assert.equal(adminApiAllowed.nextCalled, true);
+      assert.equal(adminApiAllowed.nextError, null);
+      assert.equal(adminApiAllowed.req.apiKey.role, "admin");
+
       const created = await createApiKey({ name: "main-backend-prod" });
       assert.equal(created.name, "main-backend-prod");
       assert.match(created.api_key, /^mspa_/);
@@ -95,6 +100,7 @@ test("admin token can create and revoke client API keys", async () => {
       assert.equal(apiAllowed.nextCalled, true);
       assert.equal(apiAllowed.nextError, null);
       assert.equal(apiAllowed.req.apiKey.id, created.id);
+      assert.equal(apiAllowed.req.apiKey.role, "client");
 
       const listed = await listApiKeys();
       assert.equal(listed.length, 1);

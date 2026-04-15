@@ -49,6 +49,12 @@ export function buildOpenApiDocument(baseUrl) {
       version: "0.1.0"
     },
     servers,
+    tags: [
+      { name: "Public", description: "Health checks and documentation endpoints." },
+      { name: "Stores", description: "Store catalog metadata endpoints." },
+      { name: "Products", description: "Product search and lookup endpoints." },
+      { name: "Admin", description: "Administrative API key management endpoints." }
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -130,6 +136,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/ping": {
         get: {
           summary: "Health ping",
+          tags: ["Public"],
           responses: {
             200: {
               description: "OK",
@@ -150,6 +157,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/stores": {
         get: {
           summary: "List supported stores",
+          tags: ["Stores"],
           security: [{ bearerAuth: [] }],
           responses: {
             200: {
@@ -170,6 +178,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/products/search": {
         get: {
           summary: "Search products across one or more stores",
+          tags: ["Products"],
           security: [{ bearerAuth: [] }],
           parameters: [
             { name: "q", in: "query", required: true, schema: { type: "string" } },
@@ -197,6 +206,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/products/by-url": {
         get: {
           summary: "Fetch a product by absolute product URL",
+          tags: ["Products"],
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -221,6 +231,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/products/{store}/{sourceId}": {
         get: {
           summary: "Fetch a product by store and source id",
+          tags: ["Products"],
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -251,6 +262,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/admin/api-keys": {
         get: {
           summary: "List API keys",
+          tags: ["Admin"],
           security: [{ bearerAuth: [] }],
           responses: {
             200: {
@@ -273,6 +285,7 @@ export function buildOpenApiDocument(baseUrl) {
         },
         post: {
           summary: "Create API key",
+          tags: ["Admin"],
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
@@ -313,6 +326,7 @@ export function buildOpenApiDocument(baseUrl) {
       "/admin/api-keys/{id}/revoke": {
         post: {
           summary: "Revoke API key",
+          tags: ["Admin"],
           security: [{ bearerAuth: [] }],
           parameters: [
             {

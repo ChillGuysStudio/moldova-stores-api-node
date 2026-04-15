@@ -49,7 +49,7 @@ export function createApp() {
     res.sendFile(path.join(PUBLIC_DIR, "index.html"));
   });
   app.use("/admin", requireAdminToken, adminRouter);
-  app.use(requireApiKey, storesRouter);
+  app.use(storesRouter);
   app.use("/products", requireApiKey, productsRouter);
   app.get("/openapi.json", (req, res) => {
     res.json(buildOpenApiDocument(requestBaseUrl(req)));
