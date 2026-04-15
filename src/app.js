@@ -26,17 +26,24 @@ function shouldIncludeAdminDocs() {
   return process.env.NODE_ENV !== "production";
 }
 
+function shouldLogRequest(req) {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  return (
+    req.path === "/ping" ||
+    req.path === "/docs" ||
+    req.path === "/openapi.json" ||
+    req.path.startsWith("/products")
+  );
+}
+
 export function createApp() {
   const app = express();
   app.use(express.json());
   app.set("trust proxy", true);
   app.use((req, _res, next) => {
-    if (
-      req.path === "/ping" ||
-      req.path === "/docs" ||
-      req.path === "/openapi.json" ||
-      req.path.startsWith("/products")
-    ) {
+    if (shouldLogRequest(req)) {
       logInfo("request", {
         method: req.method,
         path: req.path,

@@ -1,8 +1,9 @@
 import { createApp } from "./app.js";
 import { initDb } from "./storage/db.js";
 import { startSelfPing, stopSelfPing } from "./selfPing.js";
-import { logError, logInfo } from "./utils/logger.js";
+import { closeLogger, initLogger, logError, logInfo } from "./utils/logger.js";
 
+await initLogger();
 logInfo("bootstrap: main.js loaded");
 logInfo("bootstrap: env loaded", { port: process.env.PORT || "8000" });
 
@@ -36,8 +37,9 @@ server.on("error", (error) => {
 function shutdown() {
   logInfo("bootstrap: shutdown requested");
   stopSelfPing();
-  server.close(() => {
+  server.close(async () => {
     logInfo("bootstrap: shutdown complete");
+    await closeLogger();
     process.exit(0);
   });
 }

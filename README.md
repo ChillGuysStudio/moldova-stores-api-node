@@ -51,7 +51,7 @@ src/adapters/        Store-specific integrations
 src/storage/         SQLite/Postgres identity storage
 src/utils/           Shared helpers such as logging, curl, parsing
 certs/cacert.pem     Optional CA bundle used on hosts with broken system CA paths
-logs/app.log         Runtime log file created on first write
+logs/app-YYYY-MM-DD.log  Daily runtime log files
 ```
 
 ## Endpoints

@@ -13,6 +13,10 @@ import { logError, logInfo, logWarn } from "../utils/logger.js";
 
 export const productsRouter = express.Router();
 
+function shouldLogSuccessfulProductRequests() {
+  return process.env.NODE_ENV !== "production";
+}
+
 productsRouter.get("/search", asyncHandler(async (req, res) => {
   const query = String(req.query.q || "").trim();
   if (!query) {
@@ -32,7 +36,9 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
     return res.status(status).json({ detail: message });
   }
 
-  logInfo("search start", { query, page, pageSize, stores: selectedStores });
+  if (shouldLogSuccessfulProductRequests()) {
+    logInfo("search start", { query, page, pageSize, stores: selectedStores });
+  }
 
   const settled = await Promise.allSettled(
     selectedStores.map((store) => searchStore(store, { q: query, page, pageSize }))
@@ -52,14 +58,16 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
     logError("search store failed", { store, query, page, pageSize, error: result.reason });
     response.errors[store] = makeStoreSearchError(store, result.reason?.message || String(result.reason));
   });
-  logInfo("search complete", {
-    query,
-    page,
-    pageSize,
-    stores: selectedStores,
-    ok: Object.keys(response.results),
-    errors: Object.keys(response.errors)
-  });
+  if (shouldLogSuccessfulProductRequests()) {
+    logInfo("search complete", {
+      query,
+      page,
+      pageSize,
+      stores: selectedStores,
+      ok: Object.keys(response.results),
+      errors: Object.keys(response.errors)
+    });
+  }
   return res.json(response);
 }));
 
@@ -82,7 +90,9 @@ productsRouter.get("/by-url", asyncHandler(async (req, res) => {
   }
   try {
     const product = await adapter.getByUrl(inputUrl);
-    logInfo("by-url success", { store, url: inputUrl, source_id: product.source_id });
+    if (shouldLogSuccessfulProductRequests()) {
+      logInfo("by-url success", { store, url: inputUrl, source_id: product.source_id });
+    }
     return res.json(product);
   } catch (error) {
     logError("by-url failed", { store, url: inputUrl, error });
@@ -97,11 +107,13 @@ productsRouter.get("/:store/:sourceId", asyncHandler(async (req, res) => {
   }
   try {
     const product = await adapter.getById(req.params.sourceId);
-    logInfo("by-id success", {
-      store: req.params.store,
-      sourceId: req.params.sourceId,
-      resolved: product.source_id
-    });
+    if (shouldLogSuccessfulProductRequests()) {
+      logInfo("by-id success", {
+        store: req.params.store,
+        sourceId: req.params.sourceId,
+        resolved: product.source_id
+      });
+    }
     return res.json(product);
   } catch (error) {
     if (error instanceof ProductNotResolvedError) {
