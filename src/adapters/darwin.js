@@ -4,6 +4,7 @@ import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getText } from "../utils/http.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
 import { findProductJsonLd } from "../utils/jsonld.js";
+import { normalizeAvailability } from "../utils/availability.js";
 import { toFloat } from "../utils/price.js";
 import { productFromJsonLd } from "../utils/product.js";
 
@@ -20,7 +21,7 @@ export class DarwinAdapter {
       store: this.store,
       query,
       page,
-      products: this.parseSearchCards($),
+      products: await this.enrichAvailability(this.parseSearchCards($)),
       total: this.totalFromSearch($)
     });
   }
@@ -40,6 +41,9 @@ export class DarwinAdapter {
       throw new Error(`Darwin product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    if (product.availability === "unknown") {
+      product.availability = this.availabilityFromProductHtml(html);
+    }
     await saveIdentity({
       store: this.store,
       source_id: product.source_id,
@@ -82,7 +86,7 @@ export class DarwinAdapter {
         image,
         images: image ? [image] : [],
         price: this.priceFromCard(card, ga4Item),
-        availability: "unknown",
+        availability: this.availabilityFromCard(card),
         short_description: this.descriptionFromCard(card, name),
         source_type: "html_card",
         raw: {
@@ -100,6 +104,34 @@ export class DarwinAdapter {
       products.push(product);
     });
     return products;
+  }
+
+  async enrichAvailability(products) {
+    const unknownProducts = products.filter((product) => product.availability === "unknown" && product.url);
+    const workers = Array.from({ length: Math.min(4, unknownProducts.length) }, async (_, workerIndex) => {
+      for (let index = workerIndex; index < unknownProducts.length; index += 4) {
+        const product = unknownProducts[index];
+        try {
+          product.availability = await this.availabilityFromUrl(product.url);
+        } catch {
+          product.availability = "unknown";
+        }
+      }
+    });
+    await Promise.all(workers);
+    return products;
+  }
+
+  async availabilityFromUrl(url) {
+    const html = await getText(url);
+    const jsonld = findProductJsonLd(html);
+    if (jsonld) {
+      const product = productFromJsonLd(this.store, jsonld, url);
+      if (product.availability !== "unknown") {
+        return product.availability;
+      }
+    }
+    return this.availabilityFromProductHtml(html);
   }
 
   ga4ItemFromLink(raw) {
@@ -165,6 +197,26 @@ export class DarwinAdapter {
       old,
       currency: "MDL"
     });
+  }
+
+  availabilityFromCard(card) {
+    if (card.find(".add-to-cart").length) {
+      return "in_stock";
+    }
+    const cardText = card.text().trim().replace(/\s+/g, " ");
+    const normalized = normalizeAvailability(cardText);
+    if (normalized !== "unknown") {
+      return normalized;
+    }
+    return "unknown";
+  }
+
+  availabilityFromProductHtml(html) {
+    const $ = soupFromHtml(html);
+    if ($(".add-to-cart").length) {
+      return "in_stock";
+    }
+    return normalizeAvailability($("body").text());
   }
 
   totalFromSearch($) {

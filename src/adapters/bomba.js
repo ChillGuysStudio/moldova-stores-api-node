@@ -1,8 +1,9 @@
 import { makePrice, makeProduct, makeProductList } from "../models.js";
-import { saveIdentity } from "../storage/productIdentity.js";
+import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getText, postJson } from "../utils/curlClient.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
 import { findProductJsonLd } from "../utils/jsonld.js";
+import { normalizeAvailability } from "../utils/availability.js";
 import { toFloat } from "../utils/price.js";
 import { productFromJsonLd } from "../utils/product.js";
 
@@ -23,7 +24,7 @@ export class BombaAdapter {
       store: this.store,
       query,
       page,
-      products: this.parseSearchCards($),
+      products: await this.enrichAvailability(this.parseSearchCards($)),
       total: this.totalFromSearch($)
     });
   }
@@ -46,10 +47,14 @@ export class BombaAdapter {
         current: toFloat(data.price),
         old: toFloat(data.discount)
       }),
-      availability: "unknown",
+      availability: this.availabilityFromApiItem(data),
       source_type: "json_api",
       raw: data
     });
+    const identity = await getIdentity(this.store, product.source_id);
+    if (product.availability === "unknown" && identity?.url) {
+      return this.getByUrl(identity.url);
+    }
     await saveIdentity({
       store: this.store,
       source_id: product.source_id,
@@ -70,6 +75,9 @@ export class BombaAdapter {
     const urlId = this.idFromUrl(url);
     product.source_id = product.source_id || urlId;
     product.sku = product.sku || product.source_id;
+    if (product.availability === "unknown") {
+      product.availability = this.availabilityFromProductHtml(html);
+    }
     await saveIdentity({
       store: this.store,
       source_id: product.source_id,
@@ -114,7 +122,7 @@ export class BombaAdapter {
         image,
         images: image ? [image] : [],
         price: makePrice({ current: price, old: oldPrice }),
-        availability: card.find(".button-cart, .check_color_and_size").length ? "in_stock" : "unknown",
+        availability: this.availabilityFromCard(card),
         source_type: "html_card",
         raw: {
           data_articol: card.attr("data-articol") || null,
@@ -131,6 +139,76 @@ export class BombaAdapter {
       products.push(product);
     });
     return products;
+  }
+
+  async enrichAvailability(products) {
+    const unknownProducts = products.filter((product) => product.availability === "unknown" && product.url);
+    const workers = Array.from({ length: Math.min(4, unknownProducts.length) }, async (_, workerIndex) => {
+      for (let index = workerIndex; index < unknownProducts.length; index += 4) {
+        const product = unknownProducts[index];
+        try {
+          product.availability = await this.availabilityFromUrl(product.url);
+        } catch {
+          product.availability = "unknown";
+        }
+      }
+    });
+    await Promise.all(workers);
+    return products;
+  }
+
+  async availabilityFromUrl(url) {
+    const html = await getText(url, {}, { requireImpersonation: true });
+    const jsonld = findProductJsonLd(html);
+    if (jsonld) {
+      const product = productFromJsonLd(this.store, jsonld, url);
+      if (product.availability !== "unknown") {
+        return product.availability;
+      }
+    }
+    return this.availabilityFromProductHtml(html);
+  }
+
+  availabilityFromCard(card) {
+    if (card.find(".button-cart, .check_color_and_size").length) {
+      return "in_stock";
+    }
+    return normalizeAvailability(card.text());
+  }
+
+  availabilityFromApiItem(item) {
+    const candidates = [
+      item.in_stock,
+      item.inStock,
+      item.available,
+      item.availability,
+      item.stock,
+      item.quantity
+    ];
+    for (const value of candidates) {
+      if (value === undefined || value === null || value === "") {
+        continue;
+      }
+      const normalized = normalizeAvailability(value);
+      if (normalized !== "unknown") {
+        return normalized;
+      }
+      if (typeof value === "number" && value > 0) {
+        return "in_stock";
+      }
+      if (value === false || value === 0 || value === "0") {
+        return "out_of_stock";
+      }
+    }
+    return "unknown";
+  }
+
+  availabilityFromProductHtml(html) {
+    const $ = soupFromHtml(html);
+    if ($(".button-cart, .check_color_and_size").length) {
+      return "in_stock";
+    }
+    return normalizeAvailability($("body").text());
   }
 
   idFromUrl(url) {

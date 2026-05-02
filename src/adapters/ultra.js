@@ -4,6 +4,7 @@ import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getJson, getText } from "../utils/http.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
 import { findProductJsonLd } from "../utils/jsonld.js";
+import { normalizeAvailability } from "../utils/availability.js";
 import { toFloat } from "../utils/price.js";
 import { productFromJsonLd } from "../utils/product.js";
 
@@ -23,7 +24,7 @@ export class UltraAdapter {
       query,
       page,
       page_size: this.intOrNull(payload.product_page_limit),
-      products: this.parseSearchItems(payload.products),
+      products: await this.enrichAvailability(this.parseSearchItems(payload.products)),
       total: this.intOrNull(payload.total)
     });
   }
@@ -32,14 +33,6 @@ export class UltraAdapter {
     const identity = await getIdentity(this.store, sourceId);
     if (identity?.url) {
       return this.getByUrl(identity.url);
-    }
-
-    const results = await this.search(String(sourceId));
-    const exact = results.products.find(
-      (product) => product.source_id === String(sourceId) && product.url
-    );
-    if (exact?.url) {
-      return this.getByUrl(exact.url);
     }
 
     throw new ProductNotResolvedError(
@@ -56,6 +49,9 @@ export class UltraAdapter {
       throw new Error(`Ultra product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    if (product.availability === "unknown") {
+      product.availability = this.availabilityFromProductHtml(html);
+    }
     await saveIdentity({
       store: this.store,
       source_id: product.source_id,
@@ -116,6 +112,42 @@ export class UltraAdapter {
     });
 
     return products;
+  }
+
+  async enrichAvailability(products) {
+    const workers = Array.from({ length: Math.min(4, products.length) }, async (_, workerIndex) => {
+      for (let index = workerIndex; index < products.length; index += 4) {
+        const product = products[index];
+        if (product.availability !== "unknown" || !product.url) {
+          continue;
+        }
+        try {
+          product.availability = await this.availabilityFromUrl(product.url);
+        } catch {
+          product.availability = "unknown";
+        }
+      }
+    });
+    await Promise.all(workers);
+    return products;
+  }
+
+  async availabilityFromUrl(url) {
+    const html = await getText(url);
+    const jsonld = findProductJsonLd(html);
+    if (jsonld) {
+      const product = productFromJsonLd(this.store, jsonld, url);
+      if (product.availability !== "unknown") {
+        return product.availability;
+      }
+    }
+    return this.availabilityFromProductHtml(html);
+  }
+
+  availabilityFromProductHtml(html) {
+    const $ = soupFromHtml(html);
+    const availabilityText = $(".product-details__availability .badge").first().text().trim().replace(/\s+/g, " ");
+    return normalizeAvailability(availabilityText);
   }
 
   textFrom(scope, selector) {

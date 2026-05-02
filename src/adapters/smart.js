@@ -2,6 +2,7 @@ import { makePrice, makeProduct, makeProductList } from "../models.js";
 import { getText as getTextCurl } from "../utils/curlClient.js";
 import { getJson, getText } from "../utils/http.js";
 import { normalizeAvailability } from "../utils/availability.js";
+import { soupFromHtml } from "../utils/html.js";
 import { findProductJsonLd } from "../utils/jsonld.js";
 import { normalizeCurrency, toFloat } from "../utils/price.js";
 import { productFromJsonLd } from "../utils/product.js";
@@ -108,7 +109,11 @@ export class SmartAdapter {
   fromProductPage(html, fallbackUrl) {
     const jsonld = findProductJsonLd(html);
     if (jsonld) {
-      return productFromJsonLd(this.store, jsonld, fallbackUrl);
+      const product = productFromJsonLd(this.store, jsonld, fallbackUrl);
+      if (product.availability === "unknown") {
+        product.availability = this.availabilityFromProductHtml(html);
+      }
+      return product;
     }
 
     const item = this.extractMicrodata(html);
@@ -140,6 +145,14 @@ export class SmartAdapter {
         og_image: item.ogImage
       }
     });
+  }
+
+  availabilityFromProductHtml(html) {
+    const $ = soupFromHtml(html);
+    if ($("[data-add-to-cart], .add-to-cart, button[type='submit']").length) {
+      return "in_stock";
+    }
+    return normalizeAvailability($("body").text());
   }
 
   extractMicrodata(html) {

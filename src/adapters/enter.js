@@ -3,6 +3,8 @@ import { makePrice, makeProduct, makeProductList } from "../models.js";
 import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getJson, getText } from "../utils/http.js";
 import { findProductJsonLd } from "../utils/jsonld.js";
+import { soupFromHtml } from "../utils/html.js";
+import { normalizeAvailability } from "../utils/availability.js";
 import { normalizeCurrency, toFloat } from "../utils/price.js";
 import { productFromJsonLd } from "../utils/product.js";
 
@@ -20,7 +22,7 @@ export class EnterAdapter {
       store: this.store,
       query,
       page,
-      products: (payload.products || []).map((item) => this.fromSearchItem(item)),
+      products: await this.enrichAvailability((payload.products || []).map((item) => this.fromSearchItem(item))),
       total: payload.total ?? null
     });
   }
@@ -40,6 +42,9 @@ export class EnterAdapter {
       throw new Error(`Enter product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    if (product.availability === "unknown") {
+      product.availability = this.availabilityFromProductHtml(html);
+    }
     await saveIdentity({
       store: this.store,
       source_id: product.source_id,
@@ -81,5 +86,45 @@ export class EnterAdapter {
       name: product.name
     });
     return product;
+  }
+
+  async enrichAvailability(products) {
+    const workers = Array.from({ length: Math.min(4, products.length) }, async (_, workerIndex) => {
+      for (let index = workerIndex; index < products.length; index += 4) {
+        const product = products[index];
+        if (product.availability !== "unknown" || !product.url) {
+          continue;
+        }
+        try {
+          product.availability = await this.availabilityFromUrl(product.url);
+        } catch {
+          product.availability = "unknown";
+        }
+      }
+    });
+    await Promise.all(workers);
+    return products;
+  }
+
+  async availabilityFromUrl(url) {
+    const html = await getText(url);
+    const jsonld = findProductJsonLd(html);
+    if (jsonld) {
+      const product = productFromJsonLd(this.store, jsonld, url);
+      if (product.availability !== "unknown") {
+        return product.availability;
+      }
+    }
+    return this.availabilityFromProductHtml(html);
+  }
+
+  availabilityFromProductHtml(html) {
+    const $ = soupFromHtml(html);
+    const availabilityText = $(".stock, [class*='stock'], [class*='availability']")
+      .first()
+      .text()
+      .trim()
+      .replace(/\s+/g, " ");
+    return normalizeAvailability(availabilityText);
   }
 }

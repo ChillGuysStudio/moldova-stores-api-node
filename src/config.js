@@ -32,8 +32,8 @@ export const STORE_CAPABILITIES = {
     base_url: "https://xstore.md",
     supports_search: true,
     supports_url_fetch: true,
-    supports_id_fetch: "search_resolved",
-    notes: "Uses full HTML search cards with data-id metadata; cold ID lookup resolves through an exact search card."
+    supports_id_fetch: "cached_or_resolved",
+    notes: "Uses full HTML search cards with data-id metadata; cold ID lookup requires an existing identity mapping from search/by-url."
   },
   enter: {
     store: "enter",
@@ -60,6 +60,6 @@ export const STORE_CAPABILITIES = {
     supports_search: true,
     supports_url_fetch: true,
     supports_id_fetch: "cached_or_resolved",
-    notes: "Uses the internal /search/categories JSON endpoint with HTML product fragments; by-id resolves through cache or exact code search."
+    notes: "Uses the internal /search/categories JSON endpoint with HTML product fragments; cold ID lookup requires an existing identity mapping from search/by-url."
   }
 };

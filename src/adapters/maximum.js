@@ -3,6 +3,7 @@ import { saveIdentity } from "../storage/productIdentity.js";
 import { getJson, getText } from "../utils/http.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
 import { findProductJsonLd } from "../utils/jsonld.js";
+import { normalizeAvailability } from "../utils/availability.js";
 import { normalizeCurrency, toFloat } from "../utils/price.js";
 import { productFromJsonLd } from "../utils/product.js";
 
@@ -51,6 +52,9 @@ export class MaximumAdapter {
       throw new Error(`Maximum product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    if (product.availability === "unknown") {
+      product.availability = this.availabilityFromProductHtml(html);
+    }
     await saveIdentity({
       store: this.store,
       source_id: product.source_id,
@@ -90,7 +94,7 @@ export class MaximumAdapter {
           old: this.priceFromText(card.find(".product__item__price-old").first()),
           currency: "MDL"
         }),
-        availability: card.find(".product_not_in_shop, .not_in_shops").length ? "out_of_stock" : "unknown",
+        availability: this.availabilityFromCard(card),
         short_description: this.descriptionFromCard(card),
         source_type: "html_card",
         raw: { url }
@@ -159,7 +163,7 @@ export class MaximumAdapter {
         old: toFloat(features["2"]?.value),
         currency: normalizeCurrency(item.currency)
       }),
-      availability: "unknown",
+      availability: this.availabilityFromCompareItem(item),
       source_type: "cookie_based_json",
       raw: item
     });
@@ -170,5 +174,49 @@ export class MaximumAdapter {
       name: product.name
     });
     return product;
+  }
+
+  availabilityFromCard(card) {
+    if (card.find(".js-add-to-cart.product__item__btn, .product__item__btn[data-href]").length) {
+      return "in_stock";
+    }
+    if (card.find(".product_not_in_shop, .not_in_shops").length) {
+      return "out_of_stock";
+    }
+    return "unknown";
+  }
+
+  availabilityFromCompareItem(item) {
+    const candidates = [
+      item.in_stock,
+      item.inStock,
+      item.available,
+      item.availability,
+      item.stock
+    ];
+    for (const value of candidates) {
+      if (value === undefined || value === null || value === "") {
+        continue;
+      }
+      const normalized = normalizeAvailability(value);
+      if (normalized !== "unknown") {
+        return normalized;
+      }
+      if (typeof value === "number" && value > 0) {
+        return "in_stock";
+      }
+      if (value === false || value === 0 || value === "0") {
+        return "out_of_stock";
+      }
+    }
+    return "unknown";
+  }
+
+  availabilityFromProductHtml(html) {
+    const $ = soupFromHtml(html);
+    if ($(".js-add-to-cart.product__item__btn, .product__item__btn[data-href], .js-add-to-cart").length) {
+      return "in_stock";
+    }
+    return normalizeAvailability($("body").text());
   }
 }

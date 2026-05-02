@@ -1,8 +1,10 @@
 import { makePrice, makeProduct, makeProductList } from "../models.js";
+import { ProductNotResolvedError } from "../errors.js";
 import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getText } from "../utils/http.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
 import { findProductJsonLd } from "../utils/jsonld.js";
+import { normalizeAvailability } from "../utils/availability.js";
 import { toFloat } from "../utils/price.js";
 import { productFromJsonLd } from "../utils/product.js";
 
@@ -23,7 +25,7 @@ export class XstoreAdapter {
       store: this.store,
       query,
       page,
-      products: this.parseCards($),
+      products: await this.enrichAvailability(this.parseCards($)),
       total: this.totalFromSearch($)
     });
   }
@@ -33,14 +35,11 @@ export class XstoreAdapter {
     if (identity?.url && !identity.url.includes("javascript:")) {
       return this.getByUrl(identity.url);
     }
-    const results = await this.search(String(sourceId));
-    const exact = results.products.find(
-      (item) => item.source_id === String(sourceId) && item.url
+    throw new ProductNotResolvedError(
+      this.store,
+      sourceId,
+      "Xstore product ID is not cached yet. Use search or by-url to resolve it first."
     );
-    if (!exact) {
-      throw new Error(`Xstore product ${sourceId} not found`);
-    }
-    return this.getByUrl(exact.url);
   }
 
   async getByUrl(url) {
@@ -50,6 +49,9 @@ export class XstoreAdapter {
       throw new Error(`Xstore product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    if (product.availability === "unknown") {
+      product.availability = this.availabilityFromProductHtml(html);
+    }
     await saveIdentity({
       store: this.store,
       source_id: product.source_id,
@@ -93,7 +95,7 @@ export class XstoreAdapter {
           old: this.priceFromCard(card, ".x-old"),
           currency: "MDL"
         }),
-        availability: card.find(".add_xcart").length ? "in_stock" : "unknown",
+        availability: this.availabilityFromCard(card),
         short_description: this.textFromCard(card, ".xp-attr"),
         source_type: "html_card",
         raw: Object.fromEntries(
@@ -110,6 +112,49 @@ export class XstoreAdapter {
       products.push(product);
     });
     return products;
+  }
+
+  async enrichAvailability(products) {
+    const unknownProducts = products.filter((product) => product.availability === "unknown" && product.url);
+    const workers = Array.from({ length: Math.min(4, unknownProducts.length) }, async (_, workerIndex) => {
+      for (let index = workerIndex; index < unknownProducts.length; index += 4) {
+        const product = unknownProducts[index];
+        try {
+          product.availability = await this.availabilityFromUrl(product.url);
+        } catch {
+          product.availability = "unknown";
+        }
+      }
+    });
+    await Promise.all(workers);
+    return products;
+  }
+
+  async availabilityFromUrl(url) {
+    const html = await getText(url);
+    const jsonld = findProductJsonLd(html);
+    if (jsonld) {
+      const product = productFromJsonLd(this.store, jsonld, url);
+      if (product.availability !== "unknown") {
+        return product.availability;
+      }
+    }
+    return this.availabilityFromProductHtml(html);
+  }
+
+  availabilityFromCard(card) {
+    if (card.find(".add_xcart").length) {
+      return "in_stock";
+    }
+    return normalizeAvailability(card.text());
+  }
+
+  availabilityFromProductHtml(html) {
+    const $ = soupFromHtml(html);
+    if ($(".add_xcart, .xp-buy.add_xcart").length) {
+      return "in_stock";
+    }
+    return normalizeAvailability($("body").text());
   }
 
   priceFromCard(card, selector) {

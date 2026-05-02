@@ -1,0 +1,26 @@
+[2026-05-02T17:24:54.123Z] [INFO] bootstrap: main.js loaded
+[2026-05-02T17:24:54.123Z] [INFO] bootstrap: env loaded {"port":"5017"}
+[2026-05-02T17:24:54.126Z] [INFO] bootstrap: initDb begin
+[2026-05-02T17:24:54.135Z] [INFO] bootstrap: initDb success
+[2026-05-02T17:24:54.136Z] [INFO] bootstrap: self ping configured
+[2026-05-02T17:24:54.147Z] [ERROR] server error Error: listen EPERM: operation not permitted 0.0.0.0:5017
+    at Server.setupListenHandle [as _listen2] (node:net:1994:21)
+    at listenInCluster (node:net:2073:12)
+    at node:net:2282:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+[2026-05-02T17:25:12.244Z] [INFO] bootstrap: main.js loaded
+[2026-05-02T17:25:12.244Z] [INFO] bootstrap: env loaded {"port":"5017"}
+[2026-05-02T17:25:12.246Z] [INFO] bootstrap: initDb begin
+[2026-05-02T17:25:12.250Z] [INFO] bootstrap: initDb success
+[2026-05-02T17:25:12.250Z] [INFO] bootstrap: self ping configured
+[2026-05-02T17:25:12.260Z] [INFO] bootstrap: listening {"port":5017}
+[2026-05-02T17:29:25.895Z] [INFO] bootstrap: shutdown requested
+[2026-05-02T17:29:25.896Z] [INFO] bootstrap: shutdown complete
+[2026-05-02T17:29:34.087Z] [INFO] bootstrap: main.js loaded
+[2026-05-02T17:29:34.087Z] [INFO] bootstrap: env loaded {"port":"5017"}
+[2026-05-02T17:29:34.089Z] [INFO] bootstrap: initDb begin
+[2026-05-02T17:29:34.092Z] [INFO] bootstrap: initDb success
+[2026-05-02T17:29:34.093Z] [INFO] bootstrap: self ping configured
+[2026-05-02T17:29:34.103Z] [INFO] bootstrap: listening {"port":5017}
+[2026-05-02T17:36:38.476Z] [INFO] bootstrap: shutdown requested
+[2026-05-02T17:36:38.477Z] [INFO] bootstrap: shutdown complete

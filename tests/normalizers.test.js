@@ -17,3 +17,11 @@ test("normalizeAvailability handles schema urls", () => {
   assert.equal(normalizeAvailability("https://schema.org/InStock"), "in_stock");
   assert.equal(normalizeAvailability("https://schema.org/OutOfStock"), "out_of_stock");
 });
+
+test("normalizeAvailability handles Romanian store labels", () => {
+  assert.equal(normalizeAvailability("În stoc"), "in_stock");
+  assert.equal(normalizeAvailability("Disponibil"), "in_stock");
+  assert.equal(normalizeAvailability("Indisponibil"), "out_of_stock");
+  assert.equal(normalizeAvailability("Stoc epuizat"), "out_of_stock");
+  assert.equal(normalizeAvailability("Precomandă"), "preorder");
+});
