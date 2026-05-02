@@ -1,5 +1,6 @@
 import { makePrice, makeProduct, makeProductList } from "../models.js";
 import { ProductNotResolvedError } from "../errors.js";
+import { categoryForStore } from "../categories.js";
 import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getText } from "../utils/http.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
@@ -14,16 +15,26 @@ export class XstoreAdapter {
     this.base_url = "https://xstore.md";
   }
 
-  async search(query, { page = 1 } = {}) {
-    let url = `${this.base_url}/search?search=${encodeURIComponent(query)}`;
-    if (page > 1) {
-      url += `&page=${page}`;
+  async search(query, { page = 1, category = null } = {}) {
+    const storeCategory = categoryForStore(category, this.store);
+    const params = new URLSearchParams();
+    if (storeCategory) {
+      params.set("s", query);
+    } else {
+      params.set("search", query);
     }
+    if (page > 1) {
+      params.set("page", String(page));
+    }
+    const url = storeCategory
+      ? `${this.base_url}${storeCategory.path}?${params.toString()}`
+      : `${this.base_url}/search?${params.toString()}`;
     const html = await getText(url);
     const $ = soupFromHtml(html);
     return makeProductList({
       store: this.store,
       query,
+      category: category?.id ?? null,
       page,
       products: await this.enrichAvailability(this.parseCards($)),
       total: this.totalFromSearch($)

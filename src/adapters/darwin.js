@@ -1,4 +1,5 @@
 import { ProductNotResolvedError } from "../errors.js";
+import { categoryForStore } from "../categories.js";
 import { makePrice, makeProduct, makeProductList } from "../models.js";
 import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getText } from "../utils/http.js";
@@ -14,12 +15,21 @@ export class DarwinAdapter {
     this.base_url = "https://darwin.md";
   }
 
-  async search(query, { page = 1 } = {}) {
-    const html = await getText(`${this.base_url}/cautare?keywords=${encodeURIComponent(query)}&page=${page}`);
+  async search(query, { page = 1, category = null } = {}) {
+    const storeCategory = categoryForStore(category, this.store);
+    const params = new URLSearchParams({
+      keywords: query,
+      page: String(page)
+    });
+    if (storeCategory) {
+      params.set("category_id", String(storeCategory.id));
+    }
+    const html = await getText(`${this.base_url}/cautare?${params.toString()}`);
     const $ = soupFromHtml(html);
     return makeProductList({
       store: this.store,
       query,
+      category: category?.id ?? null,
       page,
       products: await this.enrichAvailability(this.parseSearchCards($)),
       total: this.totalFromSearch($)

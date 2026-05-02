@@ -1,4 +1,5 @@
 import { makePrice, makeProduct, makeProductList } from "../models.js";
+import { categoryForStore } from "../categories.js";
 import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getText, postJson } from "../utils/curlClient.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
@@ -13,16 +14,25 @@ export class BombaAdapter {
     this.base_url = "https://bomba.md";
   }
 
-  async search(query, { page = 1 } = {}) {
-    let url = `${this.base_url}/ro/cautare/?query=${encodeURIComponent(query)}`;
-    if (page > 1) {
-      url += `&page=${page}`;
+  async search(query, { page = 1, category = null } = {}) {
+    const storeCategory = categoryForStore(category, this.store);
+    const params = new URLSearchParams({ query });
+    if (page > 1 || storeCategory) {
+      params.set("page", String(page));
     }
+    if (storeCategory) {
+      params.set("stock", "1");
+      params.set(`category[${storeCategory.id}]`, String(storeCategory.id));
+      params.set("sort", "7");
+      params.set("limit", "64");
+    }
+    const url = `${this.base_url}/ro/cautare/?${params.toString()}`;
     const html = await getText(url, {}, { requireImpersonation: true });
     const $ = soupFromHtml(html);
     return makeProductList({
       store: this.store,
       query,
+      category: category?.id ?? null,
       page,
       products: await this.enrichAvailability(this.parseSearchCards($)),
       total: this.totalFromSearch($)

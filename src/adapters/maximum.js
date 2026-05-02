@@ -1,4 +1,5 @@
 import { makePrice, makeProduct, makeProductList } from "../models.js";
+import { categoryForStore } from "../categories.js";
 import { saveIdentity } from "../storage/productIdentity.js";
 import { getJson, getText } from "../utils/http.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
@@ -13,8 +14,12 @@ export class MaximumAdapter {
     this.base_url = "https://maximum.md";
   }
 
-  async search(query, { page = 1 } = {}) {
-    const html = await getText(`${this.base_url}/ro/search/${page}?query=${encodeURIComponent(query)}`, {
+  async search(query, { page = 1, category = null } = {}) {
+    const storeCategory = categoryForStore(category, this.store);
+    const url = storeCategory
+      ? this.categorySearchUrl(storeCategory.path, query, page)
+      : `${this.base_url}/ro/search/${page}?query=${encodeURIComponent(query)}`;
+    const html = await getText(url, {
       headers: {
         accept: "text/html, */*; q=0.01",
         "x-requested-with": "XMLHttpRequest",
@@ -26,10 +31,17 @@ export class MaximumAdapter {
     return makeProductList({
       store: this.store,
       query,
+      category: category?.id ?? null,
       page,
       products: this.parseSearchCards($),
       total: this.totalFromSearch($)
     });
+  }
+
+  categorySearchUrl(path, query, page) {
+    const cleanPath = path.endsWith("/") ? path : `${path}/`;
+    const pageSegment = page > 1 ? `${page}/` : "";
+    return `${this.base_url}${cleanPath}${pageSegment}?query=${encodeURIComponent(query)}`;
   }
 
   async getById(sourceId) {

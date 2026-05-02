@@ -1,4 +1,5 @@
 import { STORE_CAPABILITIES } from "./config.js";
+import { listCategories } from "./categories.js";
 
 function productSchema() {
   return {
@@ -98,6 +99,32 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
         }
       }
     },
+    "/products/categories": {
+      get: {
+        summary: "List supported product search categories",
+        tags: ["Products"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Supported category IDs and store coverage",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    items: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/SearchCategory" }
+                    }
+                  }
+                },
+                example: { items: listCategories() }
+              }
+            }
+          }
+        }
+      }
+    },
     "/products/search": {
       get: {
         summary: "Search products across one or more stores",
@@ -105,6 +132,15 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: "q", in: "query", required: true, schema: { type: "string" } },
+          {
+            name: "category",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: listCategories().map((category) => category.id)
+            }
+          },
           { name: "stores", in: "query", required: false, schema: { type: "string" } },
           { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } },
           {
@@ -284,6 +320,7 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
       properties: {
         store: { type: "string" },
         query: { type: "string" },
+        category: { type: ["string", "null"] },
         page: { type: "integer" },
         page_size: { type: ["integer", "null"] },
         products: {
@@ -297,6 +334,7 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
       type: "object",
       properties: {
         query: { type: "string" },
+        category: { type: ["string", "null"] },
         page: { type: "integer" },
         page_size: { type: ["integer", "null"] },
         stores: {
@@ -332,6 +370,21 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
           enum: ["direct", "search_resolved", "cached_or_resolved"]
         },
         notes: { type: ["string", "null"] }
+      }
+    },
+    SearchCategory: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        aliases: {
+          type: "array",
+          items: { type: "string" }
+        },
+        stores: {
+          type: "array",
+          items: { type: "string" }
+        }
       }
     }
   };

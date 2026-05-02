@@ -1,4 +1,5 @@
 import { ProductNotResolvedError } from "../errors.js";
+import { categoryForStore } from "../categories.js";
 import { makePrice, makeProduct, makeProductList } from "../models.js";
 import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getJson, getText } from "../utils/http.js";
@@ -14,13 +15,22 @@ export class EnterAdapter {
     this.base_url = "https://enter.online";
   }
 
-  async search(query, { page = 1 } = {}) {
-    const url = `${this.base_url}/search-fetch?q=${encodeURIComponent(query)}&page=${page}`;
+  async search(query, { page = 1, category = null } = {}) {
+    const storeCategory = categoryForStore(category, this.store);
+    const params = new URLSearchParams({
+      q: query,
+      page: String(page)
+    });
+    if (storeCategory) {
+      params.set("category", String(storeCategory.id));
+    }
+    const url = `${this.base_url}/search-fetch?${params.toString()}`;
     const data = await getJson(url);
     const payload = data.data || {};
     return makeProductList({
       store: this.store,
       query,
+      category: category?.id ?? null,
       page,
       products: await this.enrichAvailability((payload.products || []).map((item) => this.fromSearchItem(item))),
       total: payload.total ?? null

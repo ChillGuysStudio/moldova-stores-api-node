@@ -1,4 +1,5 @@
 import { makePrice, makeProduct, makeProductList } from "../models.js";
+import { categoryForStore } from "../categories.js";
 import { getText as getTextCurl } from "../utils/curlClient.js";
 import { getJson, getText } from "../utils/http.js";
 import { normalizeAvailability } from "../utils/availability.js";
@@ -16,16 +17,27 @@ export class SmartAdapter {
     this.apiBase = `https://smartmdnew.visely.io/prometheus/api/v3/${this.tenant}`;
   }
 
-  async search(query, { page = 1 } = {}) {
+  async search(query, { page = 1, category = null } = {}) {
+    const storeCategory = categoryForStore(category, this.store);
     const offset = Math.max(page - 1, 0) * 40;
-    const url =
-      `${this.apiBase}/search?q=${encodeURIComponent(query)}&offset=${offset}&count=40` +
-      "&includeOutOfStock=false" +
-      "&extraFields=variants,brand,model,sku,categories,category_names_ro,additional_attributes,tags";
+    const params = new URLSearchParams({
+      q: query,
+      offset: String(offset),
+      count: "40",
+      includeOutOfStock: "false",
+      extraFields: "variants,brand,model,sku,categories,category_names_ro,additional_attributes,tags"
+    });
+    if (storeCategory) {
+      params.set("f.names", storeCategory.facetName);
+      params.set("f.values", storeCategory.facetValue);
+      params.set("additionalFilters", "true");
+    }
+    const url = `${this.apiBase}/search?${params.toString()}`;
     const data = await getJson(url);
     return makeProductList({
       store: this.store,
       query,
+      category: category?.id ?? null,
       page,
       products: (data.products || []).map((item) => this.fromVisely(item)),
       total: data.meta?.total ?? null

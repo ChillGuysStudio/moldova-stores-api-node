@@ -1,5 +1,6 @@
 import express from "express";
 import { ADAPTERS } from "../adapters/index.js";
+import { listCategories, resolveCategory } from "../categories.js";
 import { ProductNotResolvedError } from "../errors.js";
 import {
   HOST_TO_STORE,
@@ -25,6 +26,14 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
   }
   const page = clampPositiveInt(req.query.page, 1);
   const pageSize = clampPositiveInt(req.query.page_size, 20, 100);
+  let category = null;
+  try {
+    category = resolveCategory(req.query.category);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logWarn("search rejected: invalid category", { category: req.query.category, message });
+    return res.status(400).json({ detail: message });
+  }
 
   let selectedStores;
   try {
@@ -37,14 +46,15 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
   }
 
   if (shouldLogSuccessfulProductRequests()) {
-    logInfo("search start", { query, page, pageSize, stores: selectedStores });
+    logInfo("search start", { query, page, pageSize, stores: selectedStores, category: category?.id ?? null });
   }
 
   const settled = await Promise.allSettled(
-    selectedStores.map((store) => searchStore(store, { q: query, page, pageSize }))
+    selectedStores.map((store) => searchStore(store, { q: query, page, pageSize, category }))
   );
   const response = makeMultiStoreProductSearch({
     query,
+    category: category?.id ?? null,
     page,
     page_size: pageSize,
     stores: selectedStores
@@ -61,6 +71,7 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
   if (shouldLogSuccessfulProductRequests()) {
     logInfo("search complete", {
       query,
+      category: category?.id ?? null,
       page,
       pageSize,
       stores: selectedStores,
@@ -70,6 +81,10 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
   }
   return res.json(response);
 }));
+
+productsRouter.get("/categories", (req, res) => {
+  return res.json({ items: listCategories() });
+});
 
 productsRouter.get("/by-url", asyncHandler(async (req, res) => {
   const inputUrl = String(req.query.url || "").trim();
@@ -147,15 +162,15 @@ function adapterOr404(store, res) {
   return adapter;
 }
 
-export async function searchStore(store, { q, page, pageSize }) {
+export async function searchStore(store, { q, page, pageSize, category = null }) {
   const adapter = ADAPTERS[store];
   if (!adapter) {
     throw new Error(`Unsupported store: ${store}`);
   }
-  return normalizedSearch(adapter, { q, page, pageSize });
+  return normalizedSearch(adapter, { q, page, pageSize, category });
 }
 
-export async function normalizedSearch(adapter, { q, page, pageSize }) {
+export async function normalizedSearch(adapter, { q, page, pageSize, category = null }) {
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
   const products = [];
@@ -164,7 +179,7 @@ export async function normalizedSearch(adapter, { q, page, pageSize }) {
   let nativePage = 1;
 
   while (products.length < end) {
-    const result = await cachedNativeSearch(adapter, { query: q, page: nativePage });
+    const result = await cachedNativeSearch(adapter, { query: q, page: nativePage, category });
     if (total === null) {
       total = result.total;
     }
@@ -186,6 +201,7 @@ export async function normalizedSearch(adapter, { q, page, pageSize }) {
   return makeProductList({
     store: adapter.store,
     query: q,
+    category: category?.id ?? null,
     page,
     page_size: pageSize,
     products: products.slice(start, end),

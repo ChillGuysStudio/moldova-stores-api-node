@@ -1,4 +1,5 @@
 import { ProductNotResolvedError } from "../errors.js";
+import { categoryForStore } from "../categories.js";
 import { makePrice, makeProduct, makeProductList } from "../models.js";
 import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getJson, getText } from "../utils/http.js";
@@ -14,7 +15,12 @@ export class UltraAdapter {
     this.base_url = "https://ultra.md";
   }
 
-  async search(query, { page = 1 } = {}) {
+  async search(query, { page = 1, category = null } = {}) {
+    const storeCategory = categoryForStore(category, this.store);
+    if (storeCategory) {
+      return this.categorySearch(query, { page, category, storeCategory });
+    }
+
     const url = `${this.base_url}/search/categories?page=${page}&search=${encodeURIComponent(query)}`;
     const data = await getJson(url);
     const payload = data.data || {};
@@ -22,10 +28,32 @@ export class UltraAdapter {
     return makeProductList({
       store: this.store,
       query,
+      category: null,
       page,
       page_size: this.intOrNull(payload.product_page_limit),
       products: await this.enrichAvailability(this.parseSearchItems(payload.products)),
       total: this.intOrNull(payload.total)
+    });
+  }
+
+  async categorySearch(query, { page, category, storeCategory }) {
+    const params = new URLSearchParams({
+      search: query,
+      category_id: String(storeCategory.id)
+    });
+    if (page > 1) {
+      params.set("page", String(page));
+    }
+    const html = await getText(`${this.base_url}/search?${params.toString()}`);
+    const $ = soupFromHtml(html);
+    return makeProductList({
+      store: this.store,
+      query,
+      category: category?.id ?? null,
+      page,
+      page_size: this.intOrNull(this.textFrom($(".pagination").first(), null)?.match(/Afișat\s+\d+\s+pe\s+(\d+)/i)?.[1]) || null,
+      products: this.parseCategoryCards($),
+      total: this.totalFromCategorySearch($)
     });
   }
 
@@ -114,6 +142,54 @@ export class UltraAdapter {
     return products;
   }
 
+  parseCategoryCards($) {
+    const products = [];
+    const seen = new Set();
+
+    $(".product-card[data-code]").each((_, element) => {
+      const card = $(element);
+      const sourceId = card.attr("data-code");
+      if (!sourceId || seen.has(sourceId)) {
+        return;
+      }
+      seen.add(sourceId);
+
+      const link = card.find(".product-card__link[href]").first();
+      const url = absoluteUrl(this.base_url, link.attr("href"));
+      const image = absoluteUrl(this.base_url, card.find(".product-card__image").first().attr("src"));
+      const product = makeProduct({
+        store: this.store,
+        source_id: sourceId,
+        sku: sourceId,
+        name: this.textFrom(card, ".product-card__title") || "Unknown product",
+        url,
+        image,
+        images: image ? [image] : [],
+        price: makePrice({
+          current: this.priceFromText(this.textFrom(card, ".product-card__current-price")),
+          old: this.priceFromText(this.textFrom(card, ".product-card__old-price")),
+          currency: "MDL"
+        }),
+        availability: card.find(".product-card__add-to-cart").length ? "in_stock" : normalizeAvailability(card.text()),
+        short_description: this.textFrom(card, ".product-card__specs-title"),
+        source_type: "html_card",
+        raw: { url }
+      });
+
+      void saveIdentity({
+        store: this.store,
+        source_id: product.source_id,
+        sku: product.sku,
+        url: product.url,
+        name: product.name
+      });
+
+      products.push(product);
+    });
+
+    return products;
+  }
+
   async enrichAvailability(products) {
     const workers = Array.from({ length: Math.min(4, products.length) }, async (_, workerIndex) => {
       for (let index = workerIndex; index < products.length; index += 4) {
@@ -150,8 +226,15 @@ export class UltraAdapter {
     return normalizeAvailability(availabilityText);
   }
 
+  totalFromCategorySearch($) {
+    const text = $(".filtered-product-list__cards-data").first().text().trim().replace(/\s+/g, " ");
+    const match = text.match(/Total:\s*(\d[\d\s]*)/i) || $.root().text().match(/din\s+(\d[\d\s]*)\s+rezultate/i);
+    return match ? Number.parseInt(match[1].replaceAll(" ", ""), 10) : null;
+  }
+
   textFrom(scope, selector) {
-    const value = scope.find(selector).first().text().trim().replace(/\s+/g, " ");
+    const target = selector ? scope.find(selector).first() : scope;
+    const value = target.text().trim().replace(/\s+/g, " ");
     return value || null;
   }
 

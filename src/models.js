@@ -48,6 +48,7 @@ export function makeProductList(overrides = {}) {
   return {
     store: "",
     query: "",
+    category: null,
     page: 1,
     page_size: null,
     products: [],
@@ -59,6 +60,7 @@ export function makeProductList(overrides = {}) {
 export function makeMultiStoreProductSearch(overrides = {}) {
   return {
     query: "",
+    category: null,
     page: 1,
     page_size: null,
     stores: [],

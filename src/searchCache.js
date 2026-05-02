@@ -46,13 +46,13 @@ function trimCache() {
   }
 }
 
-export async function cachedNativeSearch(adapter, { query, page }) {
+export async function cachedNativeSearch(adapter, { query, page, category = null }) {
   const ttl = ttlSeconds();
   if (ttl <= 0) {
-    return adapter.search(query, { page });
+    return adapter.search(query, { page, category });
   }
 
-  const key = `${adapter.store}::${query.trim().toLowerCase()}::${page}`;
+  const key = `${adapter.store}::${query.trim().toLowerCase()}::${category?.id ?? ""}::${page}`;
   const now = Date.now();
   const entry = cache.get(key);
   if (entry && entry.expiresAt > now) {
@@ -65,7 +65,7 @@ export async function cachedNativeSearch(adapter, { query, page }) {
   let promise = inFlight.get(key);
   let created = false;
   if (!promise) {
-    promise = adapter.search(query, { page });
+    promise = adapter.search(query, { page, category });
     inFlight.set(key, promise);
     created = true;
   }
