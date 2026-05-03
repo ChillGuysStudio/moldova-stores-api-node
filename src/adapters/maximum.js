@@ -1,6 +1,6 @@
 import { makePrice, makeProduct, makeProductList } from "../models.js";
 import { categoryForStore } from "../categories.js";
-import { saveIdentity } from "../storage/productIdentity.js";
+import { getIdentity, saveIdentity } from "../storage/productIdentity.js";
 import { getJson, getText } from "../utils/http.js";
 import { absoluteUrl, soupFromHtml } from "../utils/html.js";
 import { findProductJsonLd } from "../utils/jsonld.js";
@@ -28,13 +28,14 @@ export class MaximumAdapter {
       }
     });
     const $ = soupFromHtml(html);
+    const pageCategory = storeCategory ? this.categoryFromSearchPage($) : null;
     return makeProductList({
       store: this.store,
       query,
       category: category?.id ?? null,
       sort,
       page,
-      products: this.parseSearchCards($),
+      products: this.parseSearchCards($, pageCategory),
       total: this.totalFromSearch($)
     });
   }
@@ -74,7 +75,23 @@ export class MaximumAdapter {
     if (!products.length) {
       throw new Error(`Maximum product ${sourceId} not found`);
     }
-    return this.fromCompareItem(products[0]);
+    const product = this.fromCompareItem(products[0]);
+    const identity = await getIdentity(this.store, sourceId);
+    if (identity) {
+      product.url = product.url || identity.url || null;
+      product.sku = product.sku || identity.sku || null;
+      product.name = product.name || identity.name || "Unknown product";
+    }
+    if (product.availability === "unknown" && product.url) {
+      try {
+        const html = await getText(product.url);
+        product.availability = this.availabilityFromProductHtml(html);
+        product.category = product.category || this.categoryFromBreadcrumbs(html);
+      } catch {
+        product.availability = "unknown";
+      }
+    }
+    return product;
   }
 
   async getByUrl(url) {
@@ -84,6 +101,7 @@ export class MaximumAdapter {
       throw new Error(`Maximum product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {
       product.availability = this.availabilityFromProductHtml(html);
     }
@@ -97,7 +115,7 @@ export class MaximumAdapter {
     return product;
   }
 
-  parseSearchCards($) {
+  parseSearchCards($, fallbackCategory = null) {
     const products = [];
     const seen = new Set();
     $(".js-content.product__item").each((_, element) => {
@@ -118,6 +136,7 @@ export class MaximumAdapter {
         source_id: sourceId,
         sku: sourceId,
         name: title.length ? title.text().trim().replace(/\s+/g, " ") : "Unknown product",
+        category: fallbackCategory,
         url,
         image,
         images: image ? [image] : [],
@@ -141,6 +160,19 @@ export class MaximumAdapter {
       products.push(product);
     });
     return products;
+  }
+
+  categoryFromSearchPage($) {
+    const heading = $("h1").first().text().trim().replace(/\s+/g, " ");
+    if (heading && !/rezultatul c[ăa]ut[ăa]rii/i.test(heading)) {
+      return heading;
+    }
+    const values = $(".breadcrumbs a, .breadcrumb a")
+      .map((_, element) => $(element).text().trim().replace(/\s+/g, " "))
+      .get()
+      .filter(Boolean)
+      .filter((value) => !/internet-magazin|maximum/i.test(value));
+    return values.length ? values.at(-1) : null;
   }
 
   idFromCard(card, href) {
@@ -250,5 +282,15 @@ export class MaximumAdapter {
       return "in_stock";
     }
     return normalizeAvailability($("body").text());
+  }
+
+  categoryFromBreadcrumbs(html) {
+    const $ = soupFromHtml(html);
+    const values = $(".breadcrumbs a, .breadcrumb a")
+      .map((_, element) => $(element).text().trim().replace(/\s+/g, " "))
+      .get()
+      .filter(Boolean)
+      .filter((value) => !/internet-magazin|maximum/i.test(value));
+    return values.length ? values.at(-1) : null;
   }
 }

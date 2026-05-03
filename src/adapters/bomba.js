@@ -29,13 +29,14 @@ export class BombaAdapter {
     const url = `${this.base_url}/ro/cautare/?${params.toString()}`;
     const html = await getText(url, {}, { requireImpersonation: true });
     const $ = soupFromHtml(html);
+    const pageCategory = storeCategory ? this.categoryFromSearchFilters($, storeCategory.id) : null;
     return makeProductList({
       store: this.store,
       query,
       category: category?.id ?? null,
       sort,
       page,
-      products: await this.enrichAvailability(this.parseSearchCards($)),
+      products: await this.enrichAvailability(this.parseSearchCards($, pageCategory)),
       total: this.totalFromSearch($)
     });
   }
@@ -78,8 +79,15 @@ export class BombaAdapter {
       raw: data
     });
     const identity = await getIdentity(this.store, product.source_id);
-    if (product.availability === "unknown" && identity?.url) {
-      return this.getByUrl(identity.url);
+    if ((product.availability === "unknown" || !product.category) && identity?.url) {
+      const pageProduct = await this.getByUrl(identity.url);
+      product.url = product.url || pageProduct.url;
+      product.image = product.image || pageProduct.image;
+      product.images = product.images.length ? product.images : pageProduct.images;
+      product.category = product.category || pageProduct.category;
+      if (product.availability === "unknown") {
+        product.availability = pageProduct.availability;
+      }
     }
     await saveIdentity({
       store: this.store,
@@ -101,6 +109,7 @@ export class BombaAdapter {
     const urlId = this.idFromUrl(url);
     product.source_id = product.source_id || urlId;
     product.sku = product.sku || product.source_id;
+    product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {
       product.availability = this.availabilityFromProductHtml(html);
     }
@@ -114,7 +123,7 @@ export class BombaAdapter {
     return product;
   }
 
-  parseSearchCards($) {
+  parseSearchCards($, fallbackCategory = null) {
     const products = [];
     const seen = new Set();
     $(".product__item").each((_, element) => {
@@ -143,7 +152,7 @@ export class BombaAdapter {
         sku: productId,
         name,
         brand: link.attr("data-ecom_brand") || null,
-        category: link.attr("data-ecom_category") || null,
+        category: link.attr("data-ecom_category") || fallbackCategory,
         url: href,
         image,
         images: image ? [image] : [],
@@ -165,6 +174,15 @@ export class BombaAdapter {
       products.push(product);
     });
     return products;
+  }
+
+  categoryFromSearchFilters($, storeCategoryId) {
+    const input = $(`input[name="category[${storeCategoryId}]"]`).first();
+    if (!input.length) {
+      return null;
+    }
+    const text = input.closest("label, .checkbox__item, li, div").text().trim().replace(/\s+/g, " ");
+    return text.replace(/\s*\(\d+\)\s*$/, "") || null;
   }
 
   async enrichAvailability(products) {
@@ -235,6 +253,16 @@ export class BombaAdapter {
       return "in_stock";
     }
     return normalizeAvailability($("body").text());
+  }
+
+  categoryFromBreadcrumbs(html) {
+    const $ = soupFromHtml(html);
+    const values = $(".breadcrumbs a, .header__breadcrumbs a")
+      .map((_, element) => $(element).text().trim().replace(/\s+/g, " "))
+      .get()
+      .filter(Boolean)
+      .filter((value) => !/^acasa$/i.test(value));
+    return values.length ? values.at(-1) : null;
   }
 
   idFromUrl(url) {

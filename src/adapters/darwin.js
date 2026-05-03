@@ -64,6 +64,7 @@ export class DarwinAdapter {
       throw new Error(`Darwin product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {
       product.availability = this.availabilityFromProductHtml(html);
     }
@@ -240,6 +241,16 @@ export class DarwinAdapter {
       return "in_stock";
     }
     return normalizeAvailability($("body").text());
+  }
+
+  categoryFromBreadcrumbs(html) {
+    const $ = soupFromHtml(html);
+    const values = $(".breadcrumb a, .breadcrumbs a")
+      .map((_, element) => $(element).text().trim().replace(/\s+/g, " "))
+      .get()
+      .filter(Boolean)
+      .filter((value) => !/pagina principal[aă]|acasa/i.test(value));
+    return values.length ? values.at(-1) : null;
   }
 
   totalFromSearch($) {

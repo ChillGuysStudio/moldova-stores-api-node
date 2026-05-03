@@ -48,6 +48,7 @@ export class UltraAdapter {
     this.applySort(params, sort);
     const html = await getText(`${this.base_url}/search?${params.toString()}`);
     const $ = soupFromHtml(html);
+    const pageCategory = storeCategory ? this.categoryFromSearchPage($) : null;
     return makeProductList({
       store: this.store,
       query,
@@ -55,7 +56,7 @@ export class UltraAdapter {
       sort,
       page,
       page_size: this.intOrNull(this.textFrom($(".pagination").first(), null)?.match(/Afișat\s+\d+\s+pe\s+(\d+)/i)?.[1]) || null,
-      products: this.parseCategoryCards($),
+      products: this.parseCategoryCards($, pageCategory),
       total: this.totalFromCategorySearch($)
     });
   }
@@ -93,6 +94,7 @@ export class UltraAdapter {
       throw new Error(`Ultra product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {
       product.availability = this.availabilityFromProductHtml(html);
     }
@@ -158,7 +160,7 @@ export class UltraAdapter {
     return products;
   }
 
-  parseCategoryCards($) {
+  parseCategoryCards($, fallbackCategory = null) {
     const products = [];
     const seen = new Set();
 
@@ -178,6 +180,7 @@ export class UltraAdapter {
         source_id: sourceId,
         sku: sourceId,
         name: this.textFrom(card, ".product-card__title") || "Unknown product",
+        category: fallbackCategory,
         url,
         image,
         images: image ? [image] : [],
@@ -204,6 +207,19 @@ export class UltraAdapter {
     });
 
     return products;
+  }
+
+  categoryFromSearchPage($) {
+    const heading = $("h1").first().text().trim().replace(/\s+/g, " ");
+    if (heading) {
+      return heading;
+    }
+    const values = $(".breadcrumbs a, .breadcrumb a")
+      .map((_, element) => $(element).text().trim().replace(/\s+/g, " "))
+      .get()
+      .filter(Boolean)
+      .filter((value) => !/^acasa$/i.test(value));
+    return values.length ? values.at(-1) : null;
   }
 
   async enrichAvailability(products) {
@@ -240,6 +256,16 @@ export class UltraAdapter {
     const $ = soupFromHtml(html);
     const availabilityText = $(".product-details__availability .badge").first().text().trim().replace(/\s+/g, " ");
     return normalizeAvailability(availabilityText);
+  }
+
+  categoryFromBreadcrumbs(html) {
+    const $ = soupFromHtml(html);
+    const values = $(".breadcrumbs a, .breadcrumb a")
+      .map((_, element) => $(element).text().trim().replace(/\s+/g, " "))
+      .get()
+      .filter(Boolean)
+      .filter((value) => !/^acasa$/i.test(value));
+    return values.length ? values.at(-1) : null;
   }
 
   totalFromCategorySearch($) {
