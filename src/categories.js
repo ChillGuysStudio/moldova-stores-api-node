@@ -20,7 +20,7 @@ const CATEGORY_DEFINITIONS = [
       xstore: { path: "/apple/iphone" },
       enter: { id: 96 },
       darwin: { id: 423 },
-      ultra: { id: 131 }
+      ultra: { path: "/telefoane/smartphone" }
     }
   },
   {
@@ -34,7 +34,7 @@ const CATEGORY_DEFINITIONS = [
       xstore: { path: "/laptopuri" },
       enter: { id: 21 },
       darwin: { id: 560 },
-      ultra: { id: 232 }
+      ultra: { path: "/tehnica-computer/laptopuri" }
     }
   },
   {
@@ -48,7 +48,7 @@ const CATEGORY_DEFINITIONS = [
       xstore: { path: "/tablete" },
       enter: { id: 19 },
       darwin: { id: 568 },
-      ultra: { id: 246 }
+      ultra: { path: "/tablete-si-carti-electronice/tablete" }
     }
   },
   {
@@ -62,7 +62,7 @@ const CATEGORY_DEFINITIONS = [
       xstore: { path: "/televizoare" },
       enter: { id: 24 },
       darwin: { id: 562 },
-      ultra: { id: 134 }
+      ultra: { path: "/televizoare-si-accesorii/televizoare" }
     }
   },
   {
@@ -76,7 +76,7 @@ const CATEGORY_DEFINITIONS = [
       xstore: { path: "/audio/casti" },
       enter: { id: 348 },
       darwin: { id: 625 },
-      ultra: { id: 93 }
+      ultra: { path: "/audio/casti" }
     }
   },
   {
@@ -90,7 +90,7 @@ const CATEGORY_DEFINITIONS = [
       xstore: { path: "/gadgeturi/ceasuri-inteligente" },
       enter: { id: 128 },
       darwin: { id: 486 },
-      ultra: { id: 105 }
+      ultra: { path: "/ceasuri-si-bratari-inteligente/ceasuri-inteligente" }
     }
   },
   {
@@ -103,7 +103,7 @@ const CATEGORY_DEFINITIONS = [
       maximum: { path: "/ro/electrocasnice-mari/frigidere/" },
       enter: { id: 263 },
       darwin: { id: 688 },
-      ultra: { id: 249 }
+      ultra: { path: "/electrocasnice-mari-pentru-bucatarie/frigidere" }
     }
   },
   {
@@ -125,7 +125,7 @@ const CATEGORY_DEFINITIONS = [
       maximum: { path: "/ro/electrocasnice-mari/masini-de-spalat-si-uscat-rufe/" },
       enter: { id: 367 },
       darwin: { id: 680 },
-      ultra: { id: 146 }
+      ultra: { path: "/spalare-si-uscare/masini-de-spalat-rufe" }
     }
   },
   {
@@ -138,7 +138,7 @@ const CATEGORY_DEFINITIONS = [
       maximum: { path: "/ro/electrocasnice-mari/masini-de-spalat-vase/" },
       enter: { id: 264 },
       darwin: { id: 681 },
-      ultra: { id: 242 }
+      ultra: { path: "/electrocasnice-mari-pentru-bucatarie/masini-de-spalat-vase" }
     }
   },
   {
@@ -151,7 +151,7 @@ const CATEGORY_DEFINITIONS = [
       maximum: { path: "/ro/electrocasnice-mari/aspiratoare/" },
       enter: { id: 32 },
       darwin: { id: 672 },
-      ultra: { id: 115 }
+      ultra: { path: "/ingrijire-locuinta/aspiratoare" }
     }
   }
 ];
