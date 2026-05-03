@@ -26,15 +26,6 @@ export const STORE_CAPABILITIES = {
     supports_id_fetch: "direct",
     notes: "Uses the Romanian PJAX search HTML fragment for search and compare-cookie product JSON for ID lookup."
   },
-  xstore: {
-    store: "xstore",
-    name: "Xstore.md",
-    base_url: "https://xstore.md",
-    supports_search: true,
-    supports_url_fetch: true,
-    supports_id_fetch: "cached_or_resolved",
-    notes: "Uses full HTML search cards with data-id metadata; cold ID lookup requires an existing identity mapping from search/by-url."
-  },
   enter: {
     store: "enter",
     name: "Enter.online",

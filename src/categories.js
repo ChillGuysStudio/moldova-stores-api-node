@@ -17,10 +17,9 @@ const CATEGORY_DEFINITIONS = [
       smart: { facetName: "metaf_electronice", facetValue: "Smartphone" },
       bomba: { id: 686094 },
       maximum: { path: "/ro/telefoane-si-gadgeturi/telefoane-si-comunicatii/smartphoneuri/" },
-      xstore: { path: "/apple/iphone" },
       enter: { id: 96 },
       darwin: { id: 423 },
-      ultra: { path: "/telefoane/smartphone" }
+      ultra: { id: 131 }
     }
   },
   {
@@ -31,10 +30,9 @@ const CATEGORY_DEFINITIONS = [
       smart: { facetName: "metaf_electronice", facetValue: "Laptopuri" },
       bomba: { id: 634579 },
       maximum: { path: "/ro/tehnica-computerizata/laptopuri-si-computere/laptopuri/" },
-      xstore: { path: "/laptopuri" },
       enter: { id: 21 },
       darwin: { id: 560 },
-      ultra: { path: "/tehnica-computer/laptopuri" }
+      ultra: { id: 232 }
     }
   },
   {
@@ -45,10 +43,9 @@ const CATEGORY_DEFINITIONS = [
       smart: { facetName: "metaf_electronice", facetValue: "Tablete" },
       bomba: { id: 679656 },
       maximum: { path: "/ro/tehnica-computerizata/tablete-pc/tablete-pc/" },
-      xstore: { path: "/tablete" },
       enter: { id: 19 },
       darwin: { id: 568 },
-      ultra: { path: "/tablete-si-carti-electronice/tablete" }
+      ultra: { id: 246 }
     }
   },
   {
@@ -59,10 +56,9 @@ const CATEGORY_DEFINITIONS = [
       smart: { facetName: "metaf_electronice", facetValue: "Televizoare" },
       bomba: { id: 679641 },
       maximum: { path: "/ro/televizoare/televizoare/televizoare/" },
-      xstore: { path: "/televizoare" },
       enter: { id: 24 },
       darwin: { id: 562 },
-      ultra: { path: "/televizoare-si-accesorii/televizoare" }
+      ultra: { id: 134 }
     }
   },
   {
@@ -73,10 +69,9 @@ const CATEGORY_DEFINITIONS = [
       smart: { facetName: "metaf_electronice", facetValue: "Casti" },
       bomba: { id: 636098 },
       maximum: { path: "/ro/telefoane-si-gadgeturi/sisteme-audio-portabile/casti-wireless/" },
-      xstore: { path: "/audio/casti" },
       enter: { id: 348 },
       darwin: { id: 625 },
-      ultra: { path: "/audio/casti" }
+      ultra: { id: 93 }
     }
   },
   {
@@ -87,10 +82,9 @@ const CATEGORY_DEFINITIONS = [
       smart: { facetName: "metaf_electronice", facetValue: "Smart Watch" },
       bomba: { id: 679657 },
       maximum: { path: "/ro/telefoane-si-gadgeturi/telefoane-si-comunicatii/ceasuri-inteligente/" },
-      xstore: { path: "/gadgeturi/ceasuri-inteligente" },
       enter: { id: 128 },
       darwin: { id: 486 },
-      ultra: { path: "/ceasuri-si-bratari-inteligente/ceasuri-inteligente" }
+      ultra: { id: 105 }
     }
   },
   {
@@ -103,7 +97,7 @@ const CATEGORY_DEFINITIONS = [
       maximum: { path: "/ro/electrocasnice-mari/frigidere/" },
       enter: { id: 263 },
       darwin: { id: 688 },
-      ultra: { path: "/electrocasnice-mari-pentru-bucatarie/frigidere" }
+      ultra: { id: 249 }
     }
   },
   {
@@ -125,7 +119,7 @@ const CATEGORY_DEFINITIONS = [
       maximum: { path: "/ro/electrocasnice-mari/masini-de-spalat-si-uscat-rufe/" },
       enter: { id: 367 },
       darwin: { id: 680 },
-      ultra: { path: "/spalare-si-uscare/masini-de-spalat-rufe" }
+      ultra: { id: 146 }
     }
   },
   {
@@ -138,7 +132,7 @@ const CATEGORY_DEFINITIONS = [
       maximum: { path: "/ro/electrocasnice-mari/masini-de-spalat-vase/" },
       enter: { id: 264 },
       darwin: { id: 681 },
-      ultra: { path: "/electrocasnice-mari-pentru-bucatarie/masini-de-spalat-vase" }
+      ultra: { id: 242 }
     }
   },
   {
@@ -151,7 +145,7 @@ const CATEGORY_DEFINITIONS = [
       maximum: { path: "/ro/electrocasnice-mari/aspiratoare/" },
       enter: { id: 32 },
       darwin: { id: 672 },
-      ultra: { path: "/ingrijire-locuinta/aspiratoare" }
+      ultra: { id: 115 }
     }
   }
 ];

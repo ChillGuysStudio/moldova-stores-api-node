@@ -38,13 +38,13 @@ export class UltraAdapter {
 
   async categorySearch(query, { page, category, storeCategory }) {
     const params = new URLSearchParams({
-      search: query
+      search: query,
+      category: String(storeCategory.id)
     });
     if (page > 1) {
       params.set("page", String(page));
     }
-    const cleanPath = storeCategory.path.startsWith("/") ? storeCategory.path : `/${storeCategory.path}`;
-    const html = await getText(`${this.base_url}${cleanPath}?${params.toString()}`);
+    const html = await getText(`${this.base_url}/search?${params.toString()}`);
     const $ = soupFromHtml(html);
     return makeProductList({
       store: this.store,

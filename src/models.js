@@ -9,8 +9,6 @@ export const HOST_TO_STORE = {
   "www.darwin.md": "darwin",
   "maximum.md": "maximum",
   "www.maximum.md": "maximum",
-  "xstore.md": "xstore",
-  "www.xstore.md": "xstore",
   "ultra.md": "ultra",
   "www.ultra.md": "ultra"
 };

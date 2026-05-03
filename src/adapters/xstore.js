@@ -13,6 +13,8 @@ export class XstoreAdapter {
   constructor() {
     this.store = "xstore";
     this.base_url = "https://xstore.md";
+    this.disabled = true;
+    this.disabled_reason = "Xstore is intentionally not exposed through public APIs for now.";
   }
 
   async search(query, { page = 1, category = null } = {}) {
