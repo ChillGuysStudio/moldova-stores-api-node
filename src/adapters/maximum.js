@@ -14,11 +14,11 @@ export class MaximumAdapter {
     this.base_url = "https://maximum.md";
   }
 
-  async search(query, { page = 1, category = null } = {}) {
+  async search(query, { page = 1, category = null, sort = null } = {}) {
     const storeCategory = categoryForStore(category, this.store);
     const url = storeCategory
-      ? this.categorySearchUrl(storeCategory.path, query, page)
-      : `${this.base_url}/ro/search/${page}?query=${encodeURIComponent(query)}`;
+      ? this.categorySearchUrl(storeCategory.path, query, page, sort)
+      : this.searchUrl(query, page, sort);
     const html = await getText(url, {
       headers: {
         accept: "text/html, */*; q=0.01",
@@ -32,16 +32,36 @@ export class MaximumAdapter {
       store: this.store,
       query,
       category: category?.id ?? null,
+      sort,
       page,
       products: this.parseSearchCards($),
       total: this.totalFromSearch($)
     });
   }
 
-  categorySearchUrl(path, query, page) {
+  searchUrl(query, page, sort) {
+    const params = new URLSearchParams({ query });
+    this.applySort(params, sort);
+    return `${this.base_url}/ro/search/${page}?${params.toString()}`;
+  }
+
+  categorySearchUrl(path, query, page, sort) {
     const cleanPath = path.endsWith("/") ? path : `${path}/`;
     const pageSegment = page > 1 ? `${page}/` : "";
-    return `${this.base_url}${cleanPath}${pageSegment}?query=${encodeURIComponent(query)}`;
+    const params = new URLSearchParams({ query });
+    this.applySort(params, sort);
+    return `${this.base_url}${cleanPath}${pageSegment}?${params.toString()}`;
+  }
+
+  applySort(params, sort) {
+    const value = {
+      price_asc: "cheaper",
+      price_desc: "expensive",
+      popularity: "popular"
+    }[sort];
+    if (value) {
+      params.set("sort-type", value);
+    }
   }
 
   async getById(sourceId) {

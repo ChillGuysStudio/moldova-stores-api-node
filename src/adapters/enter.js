@@ -15,7 +15,7 @@ export class EnterAdapter {
     this.base_url = "https://enter.online";
   }
 
-  async search(query, { page = 1, category = null } = {}) {
+  async search(query, { page = 1, category = null, sort = null } = {}) {
     const storeCategory = categoryForStore(category, this.store);
     const params = new URLSearchParams({
       q: query,
@@ -24,6 +24,7 @@ export class EnterAdapter {
     if (storeCategory) {
       params.set("category", String(storeCategory.id));
     }
+    this.applySort(params, sort);
     const url = `${this.base_url}/search-fetch?${params.toString()}`;
     const data = await getJson(url);
     const payload = data.data || {};
@@ -31,10 +32,22 @@ export class EnterAdapter {
       store: this.store,
       query,
       category: category?.id ?? null,
+      sort,
       page,
       products: await this.enrichAvailability((payload.products || []).map((item) => this.fromSearchItem(item))),
       total: payload.total ?? null
     });
+  }
+
+  applySort(params, sort) {
+    const value = {
+      price_asc: "price_asc",
+      price_desc: "price_desc",
+      popularity: "popularity"
+    }[sort];
+    if (value) {
+      params.set("sort", value);
+    }
   }
 
   async getById(sourceId) {

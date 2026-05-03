@@ -9,6 +9,7 @@ import {
   makeStoreSearchError
 } from "../models.js";
 import { cachedNativeSearch } from "../searchCache.js";
+import { resolveSort } from "../sort.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { logError, logInfo, logWarn } from "../utils/logger.js";
 
@@ -26,6 +27,14 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
   }
   const page = clampPositiveInt(req.query.page, 1);
   const pageSize = clampPositiveInt(req.query.page_size, 20, 100);
+  let sort = null;
+  try {
+    sort = resolveSort(req.query.sort);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logWarn("search rejected: invalid sort", { sort: req.query.sort, message });
+    return res.status(400).json({ detail: message });
+  }
   let category = null;
   try {
     category = resolveCategory(req.query.category);
@@ -46,15 +55,16 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
   }
 
   if (shouldLogSuccessfulProductRequests()) {
-    logInfo("search start", { query, page, pageSize, stores: selectedStores, category: category?.id ?? null });
+    logInfo("search start", { query, page, pageSize, stores: selectedStores, category: category?.id ?? null, sort });
   }
 
   const settled = await Promise.allSettled(
-    selectedStores.map((store) => searchStore(store, { q: query, page, pageSize, category }))
+    selectedStores.map((store) => searchStore(store, { q: query, page, pageSize, category, sort }))
   );
   const response = makeMultiStoreProductSearch({
     query,
     category: category?.id ?? null,
+    sort,
     page,
     page_size: pageSize,
     stores: selectedStores
@@ -65,13 +75,14 @@ productsRouter.get("/search", asyncHandler(async (req, res) => {
       response.results[store] = result.value;
       return;
     }
-    logError("search store failed", { store, query, page, pageSize, error: result.reason });
+    logError("search store failed", { store, query, page, pageSize, sort, error: result.reason });
     response.errors[store] = makeStoreSearchError(store, result.reason?.message || String(result.reason));
   });
   if (shouldLogSuccessfulProductRequests()) {
     logInfo("search complete", {
       query,
       category: category?.id ?? null,
+      sort,
       page,
       pageSize,
       stores: selectedStores,
@@ -162,15 +173,15 @@ function adapterOr404(store, res) {
   return adapter;
 }
 
-export async function searchStore(store, { q, page, pageSize, category = null }) {
+export async function searchStore(store, { q, page, pageSize, category = null, sort = null }) {
   const adapter = ADAPTERS[store];
   if (!adapter) {
     throw new Error(`Unsupported store: ${store}`);
   }
-  return normalizedSearch(adapter, { q, page, pageSize, category });
+  return normalizedSearch(adapter, { q, page, pageSize, category, sort });
 }
 
-export async function normalizedSearch(adapter, { q, page, pageSize, category = null }) {
+export async function normalizedSearch(adapter, { q, page, pageSize, category = null, sort = null }) {
   const start = (page - 1) * pageSize;
   const end = start + pageSize;
   const products = [];
@@ -179,7 +190,7 @@ export async function normalizedSearch(adapter, { q, page, pageSize, category = 
   let nativePage = 1;
 
   while (products.length < end) {
-    const result = await cachedNativeSearch(adapter, { query: q, page: nativePage, category });
+    const result = await cachedNativeSearch(adapter, { query: q, page: nativePage, category, sort });
     if (total === null) {
       total = result.total;
     }
@@ -202,6 +213,7 @@ export async function normalizedSearch(adapter, { q, page, pageSize, category = 
     store: adapter.store,
     query: q,
     category: category?.id ?? null,
+    sort,
     page,
     page_size: pageSize,
     products: products.slice(start, end),

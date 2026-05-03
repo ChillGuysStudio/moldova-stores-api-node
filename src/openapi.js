@@ -1,5 +1,6 @@
 import { STORE_CAPABILITIES } from "./config.js";
 import { listCategories } from "./categories.js";
+import { SORT_OPTIONS } from "./sort.js";
 
 function productSchema() {
   return {
@@ -140,6 +141,16 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
               type: "string",
               enum: listCategories().map((category) => category.id)
             }
+          },
+          {
+            name: "sort",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: SORT_OPTIONS
+            },
+            description: "Optional store-native sort. Omit for each store's default ordering."
           },
           { name: "stores", in: "query", required: false, schema: { type: "string" } },
           { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } },
@@ -321,6 +332,7 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
         store: { type: "string" },
         query: { type: "string" },
         category: { type: ["string", "null"] },
+        sort: { type: ["string", "null"], enum: [...SORT_OPTIONS, null] },
         page: { type: "integer" },
         page_size: { type: ["integer", "null"] },
         products: {
@@ -335,6 +347,7 @@ export function buildOpenApiDocument(baseUrl, options = {}) {
       properties: {
         query: { type: "string" },
         category: { type: ["string", "null"] },
+        sort: { type: ["string", "null"], enum: [...SORT_OPTIONS, null] },
         page: { type: "integer" },
         page_size: { type: ["integer", "null"] },
         stores: {

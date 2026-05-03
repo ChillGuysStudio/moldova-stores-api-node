@@ -4,6 +4,7 @@ import { resolveCategory } from "../src/categories.js";
 import { makeProduct, makeProductList } from "../src/models.js";
 import { clearSearchCache } from "../src/searchCache.js";
 import { normalizedSearch } from "../src/routes/products.js";
+import { resolveSort } from "../src/sort.js";
 
 class FakeAdapter {
   constructor(nativePages) {
@@ -12,13 +13,14 @@ class FakeAdapter {
     this.calls = [];
   }
 
-  async search(query, { page = 1, category = null } = {}) {
-    this.calls.push({ page, category: category?.id ?? null });
+  async search(query, { page = 1, category = null, sort = null } = {}) {
+    this.calls.push({ page, category: category?.id ?? null, sort });
     const names = page <= this.nativePages.length ? this.nativePages[page - 1] : [];
     return makeProductList({
       store: this.store,
       query,
       category: category?.id ?? null,
+      sort,
       page,
       products: names.map((name) => makeProduct({ store: this.store, source_id: name, name })),
       total: this.nativePages.reduce((sum, items) => sum + items.length, 0)
@@ -43,8 +45,8 @@ test("normalizedSearch slices native pages", async () => {
     Array.from({ length: 20 }, (_, index) => `p${index + 21}`)
   );
   assert.deepEqual(adapter.calls, [
-    { page: 1, category: null },
-    { page: 2, category: null }
+    { page: 1, category: null, sort: null },
+    { page: 2, category: null, sort: null }
   ]);
 });
 
@@ -67,8 +69,8 @@ test("normalizedSearch reuses cached native pages", async () => {
     Array.from({ length: 20 }, (_, index) => `p${index + 21}`)
   );
   assert.deepEqual(adapter.calls, [
-    { page: 1, category: null },
-    { page: 2, category: null }
+    { page: 1, category: null, sort: null },
+    { page: 2, category: null, sort: null }
   ]);
   clearSearchCache();
 });
@@ -86,8 +88,34 @@ test("normalizedSearch keeps category-specific native cache entries", async () =
   assert.equal(result.category, "phones");
   assert.equal(uncategorized.category, null);
   assert.deepEqual(adapter.calls, [
-    { page: 1, category: "phones" },
-    { page: 1, category: null }
+    { page: 1, category: "phones", sort: null },
+    { page: 1, category: null, sort: null }
   ]);
   clearSearchCache();
+});
+
+test("normalizedSearch keeps sort-specific native cache entries", async () => {
+  clearSearchCache();
+  const adapter = new FakeAdapter([
+    Array.from({ length: 25 }, (_, index) => `p${index + 1}`)
+  ]);
+
+  const lowest = await normalizedSearch(adapter, { q: "iphone", page: 1, pageSize: 20, sort: "price_asc" });
+  const highest = await normalizedSearch(adapter, { q: "iphone", page: 1, pageSize: 20, sort: "price_desc" });
+
+  assert.equal(lowest.sort, "price_asc");
+  assert.equal(highest.sort, "price_desc");
+  assert.deepEqual(adapter.calls, [
+    { page: 1, category: null, sort: "price_asc" },
+    { page: 1, category: null, sort: "price_desc" }
+  ]);
+  clearSearchCache();
+});
+
+test("resolveSort accepts public aliases", () => {
+  assert.equal(resolveSort(undefined), null);
+  assert.equal(resolveSort("lowest"), "price_asc");
+  assert.equal(resolveSort("highest-first"), "price_desc");
+  assert.equal(resolveSort("popular"), "popularity");
+  assert.throws(() => resolveSort("date"), /Unsupported sort/);
 });

@@ -46,13 +46,13 @@ function trimCache() {
   }
 }
 
-export async function cachedNativeSearch(adapter, { query, page, category = null }) {
+export async function cachedNativeSearch(adapter, { query, page, category = null, sort = null }) {
   const ttl = ttlSeconds();
   if (ttl <= 0) {
-    return adapter.search(query, { page, category });
+    return adapter.search(query, { page, category, sort });
   }
 
-  const key = `${adapter.store}::${query.trim().toLowerCase()}::${category?.id ?? ""}::${page}`;
+  const key = `${adapter.store}::${query.trim().toLowerCase()}::${category?.id ?? ""}::${sort ?? ""}::${page}`;
   const now = Date.now();
   const entry = cache.get(key);
   if (entry && entry.expiresAt > now) {
@@ -65,7 +65,7 @@ export async function cachedNativeSearch(adapter, { query, page, category = null
   let promise = inFlight.get(key);
   let created = false;
   if (!promise) {
-    promise = adapter.search(query, { page, category });
+    promise = adapter.search(query, { page, category, sort });
     inFlight.set(key, promise);
     created = true;
   }

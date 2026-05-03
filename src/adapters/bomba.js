@@ -14,18 +14,18 @@ export class BombaAdapter {
     this.base_url = "https://bomba.md";
   }
 
-  async search(query, { page = 1, category = null } = {}) {
+  async search(query, { page = 1, category = null, sort = null } = {}) {
     const storeCategory = categoryForStore(category, this.store);
     const params = new URLSearchParams({ query });
-    if (page > 1 || storeCategory) {
+    if (page > 1 || storeCategory || sort) {
       params.set("page", String(page));
     }
     if (storeCategory) {
       params.set("stock", "1");
       params.set(`category[${storeCategory.id}]`, String(storeCategory.id));
-      params.set("sort", "7");
       params.set("limit", "64");
     }
+    this.applySort(params, sort, storeCategory);
     const url = `${this.base_url}/ro/cautare/?${params.toString()}`;
     const html = await getText(url, {}, { requireImpersonation: true });
     const $ = soupFromHtml(html);
@@ -33,10 +33,26 @@ export class BombaAdapter {
       store: this.store,
       query,
       category: category?.id ?? null,
+      sort,
       page,
       products: await this.enrichAvailability(this.parseSearchCards($)),
       total: this.totalFromSearch($)
     });
+  }
+
+  applySort(params, sort, storeCategory) {
+    const value = {
+      price_asc: "0",
+      price_desc: "1",
+      popularity: "5"
+    }[sort];
+    if (value) {
+      params.set("sort", value);
+      return;
+    }
+    if (storeCategory) {
+      params.set("sort", "7");
+    }
   }
 
   async getById(sourceId) {

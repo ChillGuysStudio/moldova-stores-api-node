@@ -15,10 +15,10 @@ export class UltraAdapter {
     this.base_url = "https://ultra.md";
   }
 
-  async search(query, { page = 1, category = null } = {}) {
+  async search(query, { page = 1, category = null, sort = null } = {}) {
     const storeCategory = categoryForStore(category, this.store);
-    if (storeCategory) {
-      return this.categorySearch(query, { page, category, storeCategory });
+    if (storeCategory || sort) {
+      return this.categorySearch(query, { page, category, storeCategory, sort });
     }
 
     const url = `${this.base_url}/search/categories?page=${page}&search=${encodeURIComponent(query)}`;
@@ -29,6 +29,7 @@ export class UltraAdapter {
       store: this.store,
       query,
       category: null,
+      sort,
       page,
       page_size: this.intOrNull(payload.product_page_limit),
       products: await this.enrichAvailability(this.parseSearchItems(payload.products)),
@@ -36,25 +37,40 @@ export class UltraAdapter {
     });
   }
 
-  async categorySearch(query, { page, category, storeCategory }) {
-    const params = new URLSearchParams({
-      search: query,
-      category: String(storeCategory.id)
-    });
+  async categorySearch(query, { page, category, storeCategory, sort }) {
+    const params = new URLSearchParams({ search: query });
+    if (storeCategory) {
+      params.set("category", String(storeCategory.id));
+    }
     if (page > 1) {
       params.set("page", String(page));
     }
+    this.applySort(params, sort);
     const html = await getText(`${this.base_url}/search?${params.toString()}`);
     const $ = soupFromHtml(html);
     return makeProductList({
       store: this.store,
       query,
       category: category?.id ?? null,
+      sort,
       page,
       page_size: this.intOrNull(this.textFrom($(".pagination").first(), null)?.match(/Afișat\s+\d+\s+pe\s+(\d+)/i)?.[1]) || null,
       products: this.parseCategoryCards($),
       total: this.totalFromCategorySearch($)
     });
+  }
+
+  applySort(params, sort) {
+    if (sort === "price_asc") {
+      params.set("sort[col]", "price");
+      params.set("sort[dir]", "asc");
+    } else if (sort === "price_desc") {
+      params.set("sort[col]", "price");
+      params.set("sort[dir]", "desc");
+    } else if (sort === "popularity") {
+      params.set("sort[col]", "popularity");
+      params.set("sort[dir]", "desc");
+    }
   }
 
   async getById(sourceId) {

@@ -15,7 +15,7 @@ export class DarwinAdapter {
     this.base_url = "https://darwin.md";
   }
 
-  async search(query, { page = 1, category = null } = {}) {
+  async search(query, { page = 1, category = null, sort = null } = {}) {
     const storeCategory = categoryForStore(category, this.store);
     const params = new URLSearchParams({
       keywords: query,
@@ -24,16 +24,29 @@ export class DarwinAdapter {
     if (storeCategory) {
       params.set("category_id", String(storeCategory.id));
     }
+    this.applySort(params, sort);
     const html = await getText(`${this.base_url}/cautare?${params.toString()}`);
     const $ = soupFromHtml(html);
     return makeProductList({
       store: this.store,
       query,
       category: category?.id ?? null,
+      sort,
       page,
       products: await this.enrichAvailability(this.parseSearchCards($)),
       total: this.totalFromSearch($)
     });
+  }
+
+  applySort(params, sort) {
+    const value = {
+      price_asc: "price",
+      price_desc: "-price",
+      popularity: "-popularity"
+    }[sort];
+    if (value) {
+      params.set("sort", value);
+    }
   }
 
   async getById(sourceId) {

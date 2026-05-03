@@ -17,7 +17,7 @@ export class SmartAdapter {
     this.apiBase = `https://smartmdnew.visely.io/prometheus/api/v3/${this.tenant}`;
   }
 
-  async search(query, { page = 1, category = null } = {}) {
+  async search(query, { page = 1, category = null, sort = null } = {}) {
     const storeCategory = categoryForStore(category, this.store);
     const offset = Math.max(page - 1, 0) * 40;
     const params = new URLSearchParams({
@@ -32,16 +32,32 @@ export class SmartAdapter {
       params.set("f.values", storeCategory.facetValue);
       params.set("additionalFilters", "true");
     }
+    this.applySort(params, sort);
     const url = `${this.apiBase}/search?${params.toString()}`;
     const data = await getJson(url);
     return makeProductList({
       store: this.store,
       query,
       category: category?.id ?? null,
+      sort,
       page,
       products: (data.products || []).map((item) => this.fromVisely(item)),
       total: data.meta?.total ?? null
     });
+  }
+
+  applySort(params, sort) {
+    const value = {
+      price_asc: "price-asc",
+      price_desc: "price-desc"
+    }[sort];
+    if (!value) {
+      return;
+    }
+    params.set("sortBy", value);
+    params.set("ftn", "sortbyf");
+    params.set("ftv", value);
+    params.set("additionalFilters", "true");
   }
 
   async getById(sourceId) {
