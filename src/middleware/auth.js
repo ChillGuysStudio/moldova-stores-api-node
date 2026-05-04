@@ -31,6 +31,20 @@ export async function requireApiKey(req, res, next) {
       return res.status(401).json({ detail: "Bearer API key is required" });
     }
 
+    const devApiKey = process.env.DEV_API_KEY;
+    if (process.env.NODE_ENV !== "production" && devApiKey && token === devApiKey) {
+      req.apiKey = {
+        id: "dev-api-key",
+        name: "dev-api-key",
+        key_prefix: "dev-api-key",
+        created_at: null,
+        last_used_at: null,
+        revoked_at: null,
+        role: "dev"
+      };
+      return next();
+    }
+
     const adminToken = process.env.ADMIN_TOKEN;
     if (adminToken && token === adminToken) {
       req.apiKey = {
