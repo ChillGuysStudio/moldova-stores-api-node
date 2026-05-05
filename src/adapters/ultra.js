@@ -175,6 +175,9 @@ export class UltraAdapter {
       const link = card.find(".product-card__link[href]").first();
       const url = absoluteUrl(this.base_url, link.attr("href"));
       const image = absoluteUrl(this.base_url, card.find(".product-card__image").first().attr("src"));
+      const hasAddToCart = card.find(".product-card__add-to-cart").length > 0;
+      const hasOutOfStockOverlay =
+        card.find(".product-card__out-of-stock, .product-card__out-of-stock-text").length > 0;
       const product = makeProduct({
         store: this.store,
         source_id: sourceId,
@@ -189,7 +192,11 @@ export class UltraAdapter {
           old: this.priceFromText(this.textFrom(card, ".product-card__old-price")),
           currency: "MDL"
         }),
-        availability: card.find(".product-card__add-to-cart").length ? "in_stock" : normalizeAvailability(card.text()),
+        availability: hasAddToCart
+          ? "in_stock"
+          : hasOutOfStockOverlay
+            ? "out_of_stock"
+            : normalizeAvailability(card.text()),
         short_description: this.textFrom(card, ".product-card__specs-title"),
         source_type: "html_card",
         raw: { url }
