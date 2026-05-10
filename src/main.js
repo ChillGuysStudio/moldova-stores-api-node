@@ -25,9 +25,9 @@ logInfo("bootstrap: initDb success");
 startSelfPing();
 logInfo("bootstrap: self ping configured");
 
-const server = app.listen(port, "0.0.0.0", () => {
+const server = app.listen(port, "127.0.0.1", () => {
   logInfo("bootstrap: listening", { port });
-  console.log(`Moldova Stores Product API Node listening on http://0.0.0.0:${port}`);
+  console.log(`Moldova Stores Product API Node listening on http://127.0.0.1:${port}`);
 });
 
 server.on("error", (error) => {
