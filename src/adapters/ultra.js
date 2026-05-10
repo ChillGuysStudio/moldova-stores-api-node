@@ -94,6 +94,9 @@ export class UltraAdapter {
       throw new Error(`Ultra product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    if (!product.source_id) {
+      throw new Error(`Ultra product URL is missing canonical product ID: ${url}`);
+    }
     product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {
       product.availability = this.availabilityFromProductHtml(html);

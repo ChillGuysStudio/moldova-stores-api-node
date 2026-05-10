@@ -75,6 +75,32 @@ test("normalizedSearch reuses cached native pages", async () => {
   clearSearchCache();
 });
 
+test("normalizedSearch returns stable last_scraped_at for cached native pages", async () => {
+  clearSearchCache();
+  const adapter = new FakeAdapter([
+    Array.from({ length: 10 }, (_, index) => `p${index + 1}`)
+  ]);
+
+  const first = await normalizedSearch(adapter, { q: "iphone", page: 1, pageSize: 10 });
+  const second = await normalizedSearch(adapter, { q: "iphone", page: 1, pageSize: 10 });
+
+  assert.equal("last_scraped_at" in first, false);
+  assert.equal("last_scraped_at" in second, false);
+  assert.match(first.products[0].last_scraped_at, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    first.products.map((product) => product.last_scraped_at),
+    Array.from({ length: 10 }, () => first.products[0].last_scraped_at)
+  );
+  assert.deepEqual(
+    second.products.map((product) => product.last_scraped_at),
+    Array.from({ length: 10 }, () => first.products[0].last_scraped_at)
+  );
+  assert.deepEqual(adapter.calls, [
+    { page: 1, category: null, sort: null }
+  ]);
+  clearSearchCache();
+});
+
 test("normalizedSearch keeps category-specific native cache entries", async () => {
   clearSearchCache();
   const adapter = new FakeAdapter([

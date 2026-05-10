@@ -22,13 +22,13 @@ export function productFromJsonLd(store, data, fallbackUrl = null) {
   const images = (Array.isArray(imagesValue) ? imagesValue : [imagesValue])
     .filter(Boolean)
     .map((image) => String(image));
-  const sourceId = data.sku ?? data.mpn ?? null;
+  const sku = data.sku !== undefined && data.sku !== null ? String(data.sku) : null;
   const url = data.url ?? offers.url ?? fallbackUrl ?? null;
 
   return makeProduct({
     store,
-    source_id: sourceId !== null ? String(sourceId) : null,
-    sku: data.sku !== undefined && data.sku !== null ? String(data.sku) : null,
+    source_id: sku,
+    sku,
     name: String(data.name ?? "Unknown product"),
     brand: brandName(data.brand),
     category: data.category ? String(data.category) : null,

@@ -63,10 +63,13 @@ export class BombaAdapter {
       {},
       { requireImpersonation: true }
     );
+    if (data.id === undefined || data.id === null) {
+      throw new Error(`Bomba product ${sourceId} is missing canonical product ID`);
+    }
     const product = makeProduct({
       store: this.store,
-      source_id: String(data.id ?? sourceId),
-      sku: String(data.id ?? sourceId),
+      source_id: String(data.id),
+      sku: String(data.id),
       name: String(data.name ?? "Unknown product"),
       brand: data.brand ?? null,
       category: data.category ?? null,
@@ -106,8 +109,9 @@ export class BombaAdapter {
     }
     const product = productFromJsonLd(this.store, jsonld, url);
     product.source_type = "json_ld";
-    const urlId = this.idFromUrl(url);
-    product.source_id = product.source_id || urlId;
+    if (!product.source_id) {
+      throw new Error(`Bomba product URL is missing canonical product ID: ${url}`);
+    }
     product.sku = product.sku || product.source_id;
     product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {

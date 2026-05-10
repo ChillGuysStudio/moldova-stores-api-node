@@ -100,7 +100,12 @@ export class MaximumAdapter {
     if (!jsonld) {
       throw new Error(`Maximum product URL not parseable: ${url}`);
     }
+    const sourceId = this.idFromUrl(url);
+    if (!sourceId) {
+      throw new Error(`Maximum product URL is missing canonical storefront product ID: ${url}`);
+    }
     const product = productFromJsonLd(this.store, jsonld, url);
+    product.source_id = sourceId;
     product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {
       product.availability = this.availabilityFromProductHtml(html);
@@ -181,7 +186,11 @@ export class MaximumAdapter {
     if (productId) {
       return String(productId);
     }
-    const match = href?.match(/\/(\d+)\/?$/);
+    return this.idFromUrl(href);
+  }
+
+  idFromUrl(url) {
+    const match = url?.match(/\/(\d+)\/?$/);
     return match ? match[1] : null;
   }
 

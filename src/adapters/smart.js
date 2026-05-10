@@ -41,7 +41,9 @@ export class SmartAdapter {
       category: category?.id ?? null,
       sort,
       page,
-      products: (data.products || []).map((item) => this.fromVisely(item)),
+      products: (data.products || [])
+        .map((item) => this.fromVisely(item))
+        .filter(Boolean),
       total: data.meta?.total ?? null
     });
   }
@@ -66,8 +68,11 @@ export class SmartAdapter {
       "&extraFields=variants,brand,model,sku,categories,category_names_ro,additional_attributes,tags";
     const data = await getJson(url);
     for (const item of data.products || []) {
-      if (String(item.sku) === String(sourceId) || String(item.id) === String(sourceId)) {
-        return this.fromVisely(item);
+      if (String(item.sku) === String(sourceId)) {
+        const product = this.fromVisely(item);
+        if (product) {
+          return product;
+        }
       }
     }
     throw new Error(`Smart product ${sourceId} not found`);
@@ -90,6 +95,9 @@ export class SmartAdapter {
   }
 
   fromVisely(item) {
+    if (item.sku === undefined || item.sku === null) {
+      return null;
+    }
     const nameValue = item.name;
     const name = nameValue && typeof nameValue === "object" ? nameValue.ro : nameValue;
     const prices = item.prices || [];
@@ -102,12 +110,8 @@ export class SmartAdapter {
 
     const product = makeProduct({
       store: this.store,
-      source_id: item.sku !== undefined && item.sku !== null
-        ? String(item.sku)
-        : item.id !== undefined && item.id !== null
-          ? String(item.id)
-          : null,
-      sku: item.sku !== undefined && item.sku !== null ? String(item.sku) : null,
+      source_id: String(item.sku),
+      sku: String(item.sku),
       name: String(name || item.model || "Unknown product"),
       brand: item.brand ?? null,
       category: Array.isArray(categoryRo) && categoryRo.length ? categoryRo.at(-1) : null,
@@ -138,6 +142,10 @@ export class SmartAdapter {
     const jsonld = findProductJsonLd(html);
     if (jsonld) {
       const product = productFromJsonLd(this.store, jsonld, fallbackUrl);
+      if (!product.sku) {
+        return null;
+      }
+      product.source_id = product.sku;
       if (product.availability === "unknown") {
         product.availability = this.availabilityFromProductHtml(html);
       }
@@ -220,7 +228,7 @@ export class SmartAdapter {
 
     return {
       name: meta("name") || heading(),
-      sku: span("sku") || span("mpn"),
+      sku: span("sku"),
       brand: meta("brand"),
       description: span("description") || metaName("description"),
       availability: link("availability"),

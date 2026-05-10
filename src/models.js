@@ -35,6 +35,8 @@ export function makeProduct(overrides = {}) {
     images: [],
     price: makePrice(),
     availability: "unknown",
+    last_scraped_at: null,
+    scrape_source: null,
     short_description: null,
     source_type: "mixed",
     raw: {},

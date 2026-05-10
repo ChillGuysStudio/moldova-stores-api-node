@@ -8,7 +8,7 @@ import {
   makeProductList,
   makeStoreSearchError
 } from "../models.js";
-import { cachedNativeSearch } from "../searchCache.js";
+import { cachedNativeSearch, cachedProductByUrl } from "../searchCache.js";
 import { resolveSort } from "../sort.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { logError, logInfo, logWarn } from "../utils/logger.js";
@@ -115,7 +115,7 @@ productsRouter.get("/by-url", asyncHandler(async (req, res) => {
     return undefined;
   }
   try {
-    const product = await adapter.getByUrl(inputUrl);
+    const product = await cachedProductByUrl(adapter, inputUrl);
     if (shouldLogSuccessfulProductRequests()) {
       logInfo("by-url success", { store, url: inputUrl, source_id: product.source_id });
     }
@@ -202,7 +202,10 @@ export async function normalizedSearch(adapter, { q, page, pageSize, category = 
       break;
     }
     seenNativePages.add(signature);
-    products.push(...result.products);
+    products.push(...result.products.map((product) => ({
+      ...product,
+      last_scraped_at: product.last_scraped_at ?? null
+    })));
     if (total !== null && products.length >= total) {
       break;
     }

@@ -34,7 +34,9 @@ export class EnterAdapter {
       category: category?.id ?? null,
       sort,
       page,
-      products: await this.enrichAvailability((payload.products || []).map((item) => this.fromSearchItem(item))),
+      products: await this.enrichAvailability((payload.products || [])
+        .map((item) => this.fromSearchItem(item))
+        .filter(Boolean)),
       total: payload.total ?? null
     });
   }
@@ -65,6 +67,9 @@ export class EnterAdapter {
       throw new Error(`Enter product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    if (!product.source_id) {
+      throw new Error(`Enter product URL is missing canonical product ID: ${url}`);
+    }
     product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {
       product.availability = this.availabilityFromProductHtml(html);
@@ -80,12 +85,15 @@ export class EnterAdapter {
   }
 
   fromSearchItem(item) {
+    if (item.id === undefined || item.id === null) {
+      return null;
+    }
     const image = item.image ?? null;
     const price = item.price || {};
     const product = makeProduct({
       store: this.store,
-      source_id: item.id !== undefined && item.id !== null ? String(item.id) : null,
-      sku: item.id !== undefined && item.id !== null ? String(item.id) : null,
+      source_id: String(item.id),
+      sku: String(item.id),
       name: String(item.name || "Unknown product"),
       brand: item.brand ?? null,
       category: null,

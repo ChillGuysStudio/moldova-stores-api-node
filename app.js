@@ -2,4 +2,4 @@ import { loadEnvFile } from "./src/env.js";
 
 loadEnvFile();
 
-import("./src/main.js");
+await import("./src/main.js");

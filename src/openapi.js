@@ -30,6 +30,10 @@ function productSchema() {
         type: "string",
         enum: ["in_stock", "out_of_stock", "preorder", "unknown"]
       },
+      scrape_source: {
+        type: ["string", "null"],
+        enum: ["search", "detail", null]
+      },
       short_description: { type: ["string", "null"] },
       source_type: { type: "string" },
       raw: { type: "object" }

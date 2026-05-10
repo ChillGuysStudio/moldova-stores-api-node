@@ -64,6 +64,9 @@ export class DarwinAdapter {
       throw new Error(`Darwin product URL not parseable: ${url}`);
     }
     const product = productFromJsonLd(this.store, jsonld, url);
+    if (!product.source_id) {
+      throw new Error(`Darwin product URL is missing canonical product ID: ${url}`);
+    }
     product.category = product.category || this.categoryFromBreadcrumbs(html);
     if (product.availability === "unknown") {
       product.availability = this.availabilityFromProductHtml(html);
@@ -89,7 +92,7 @@ export class DarwinAdapter {
       }
       const url = absoluteUrl(this.base_url, link.attr("href"));
       const ga4Item = this.ga4ItemFromLink(link.attr("data-ga4"));
-      const sourceId = ga4Item.item_id;
+      const sourceId = this.sourceIdFromCard(card);
       if (!url || !sourceId || seen.has(sourceId)) {
         return;
       }
@@ -168,6 +171,25 @@ export class DarwinAdapter {
     } catch {
       return {};
     }
+  }
+
+  sourceIdFromCard(card) {
+    const livewireKeys = card.find("*").map((_, element) => {
+      const raw = element.attribs?.["wire:snapshot"];
+      if (!raw) {
+        return null;
+      }
+      try {
+        const snapshot = JSON.parse(raw);
+        const product = snapshot?.data?.product;
+        const descriptor = Array.isArray(product) ? product[1] : null;
+        const key = descriptor?.key;
+        return key !== undefined && key !== null ? String(key) : null;
+      } catch {
+        return null;
+      }
+    }).get().filter(Boolean);
+    return livewireKeys[0] ?? null;
   }
 
   imageFromCard(card) {
