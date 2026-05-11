@@ -88,6 +88,9 @@ export class UltraAdapter {
   }
 
   async getByUrl(url) {
+    const u = new URL(url);
+    u.pathname = u.pathname.replace(/^\/ru\//, "/");
+    url = u.toString();
     const html = await getText(url);
     const jsonld = findProductJsonLd(html);
     if (!jsonld) {

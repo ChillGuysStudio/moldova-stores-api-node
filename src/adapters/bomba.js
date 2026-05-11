@@ -102,6 +102,9 @@ export class BombaAdapter {
   }
 
   async getByUrl(url) {
+    const u = new URL(url);
+    u.pathname = u.pathname.replace(/^\/ru\//, "/ro/");
+    url = u.toString();
     const html = await getText(url, {}, { requireImpersonation: true });
     const jsonld = findProductJsonLd(html);
     if (!jsonld) {

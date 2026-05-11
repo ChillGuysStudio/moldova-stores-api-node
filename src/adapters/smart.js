@@ -79,6 +79,9 @@ export class SmartAdapter {
   }
 
   async getByUrl(url) {
+    const u = new URL(url);
+    u.pathname = u.pathname.replace(/^\/ru\//, "/");
+    url = u.toString();
     const html = await getTextCurl(url, {}, { requireImpersonation: true });
     const product = this.fromProductPage(html, url);
     if (!product) {
