@@ -4,6 +4,8 @@ Node.js API for normalized product search and product lookup across Moldovan ele
 
 The service hides several different store integrations behind one API shape. Some stores expose JSON APIs, some are parsed from HTML, and Bomba uses bundled `curl-impersonate` binaries because regular Node HTTP requests are unreliable there.
 
+This service is the store-ingestion layer used by the Java/Spring backend for **pricehistory.md**. The Spring backend calls this API to search stores, resolve product URLs, persist normalized product data, and expose stable product/history endpoints to the frontend.
+
 ## Features
 
 - Multi-store product search.
@@ -12,11 +14,13 @@ The service hides several different store integrations behind one API shape. Som
 - Unified sorting: lowest price, highest price, popularity, or store default.
 - Product lookup by store/source ID where supported.
 - Product lookup by product URL.
+- Stable product identity mappings for stores where cold ID lookup is unreliable.
 - API key authentication for public API routes.
 - Admin endpoints for creating and revoking API keys.
 - SQLite or Postgres storage for API keys and product identity mappings.
 - In-memory native search cache to reduce repeated requests to store sites.
 - OpenAPI JSON and Swagger UI docs.
+- Node test coverage for auth, product identity, pagination, cache behavior, OpenAPI generation, and normalizers.
 
 ## Supported Stores
 
